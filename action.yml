@@ -12,6 +12,9 @@ inputs:
   assignee_trigger:
     description: "The assignee username that triggers the action (e.g. @claude)"
     required: false
+  base_branch:
+    description: "The branch to use as the base/source when creating new branches (defaults to repository default branch)"
+    required: false
 
   # Claude Code configuration
   model:
@@ -85,6 +88,7 @@ runs:
       env:
         TRIGGER_PHRASE: ${{ inputs.trigger_phrase }}
         ASSIGNEE_TRIGGER: ${{ inputs.assignee_trigger }}
+        BASE_BRANCH: ${{ inputs.base_branch }}
         ALLOWED_TOOLS: ${{ inputs.allowed_tools }}
         CUSTOM_INSTRUCTIONS: ${{ inputs.custom_instructions }}
         DIRECT_PROMPT: ${{ inputs.direct_prompt }}

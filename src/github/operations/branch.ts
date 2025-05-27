@@ -23,6 +23,7 @@ export async function setupBranch(
   octokits: Octokits,
   githubData: FetchDataResult,
   context: ParsedGitHubContext,
+  baseBranch?: string,
 ): Promise<BranchInfo> {
   const { owner, repo } = context.repository;
   const entityNumber = context.entityNumber;
@@ -34,6 +35,9 @@ export async function setupBranch(
     repo,
   });
   const defaultBranch = repoResponse.data.default_branch;
+  
+  // Use the provided base branch or fall back to default branch
+  const sourceBranch = baseBranch || defaultBranch;
 
   if (isPR) {
     const prData = githubData.contextData as GitHubPullRequest;
@@ -67,7 +71,7 @@ export async function setupBranch(
 
   // Creating a new branch for either an issue or closed/merged PR
   const entityType = isPR ? "pr" : "issue";
-  console.log(`Creating new branch for ${entityType} #${entityNumber}...`);
+  console.log(`Creating new branch for ${entityType} #${entityNumber} from source branch: ${sourceBranch}...`);
 
   const timestamp = new Date()
     .toISOString()
@@ -79,14 +83,14 @@ export async function setupBranch(
   const newBranch = `claude/${entityType}-${entityNumber}-${timestamp}`;
 
   try {
-    // Get the SHA of the default branch
-    const defaultBranchRef = await octokits.rest.git.getRef({
+    // Get the SHA of the source branch
+    const sourceBranchRef = await octokits.rest.git.getRef({
       owner,
       repo,
-      ref: `heads/${defaultBranch}`,
+      ref: `heads/${sourceBranch}`,
     });
 
-    const currentSHA = defaultBranchRef.data.object.sha;
+    const currentSHA = sourceBranchRef.data.object.sha;
 
     console.log(`Current SHA: ${currentSHA}`);
 
