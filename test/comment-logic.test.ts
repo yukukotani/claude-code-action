@@ -39,6 +39,28 @@ describe("updateCommentBody", () => {
       expect(result).toContain("**Claude encountered an error after 45s**");
     });
 
+    it("includes error details when provided", () => {
+      const input = {
+        ...baseInput,
+        currentBody: "Claude Code is working...",
+        actionFailed: true,
+        executionDetails: { duration_ms: 45000 },
+        errorDetails:
+          "fatal: not a git repository (or any of the parent directories): .git",
+      };
+
+      const result = updateCommentBody(input);
+      expect(result).toContain("**Claude encountered an error after 45s**");
+      expect(result).toContain("[View job]");
+      expect(result).toContain("<details>");
+      expect(result).toContain("<summary>Error details</summary>");
+      expect(result).toContain("fatal: not a git repository");
+      // Ensure error details come after the header/links
+      const errorIndex = result.indexOf("<details>");
+      const headerIndex = result.indexOf("**Claude encountered an error");
+      expect(errorIndex).toBeGreaterThan(headerIndex);
+    });
+
     it("handles username extraction from content when not provided", () => {
       const input = {
         ...baseInput,

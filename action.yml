@@ -81,7 +81,26 @@ runs:
       id: prepare
       shell: bash
       run: |
-        bun run ${{ github.action_path }}/src/entrypoints/prepare.ts
+        set +e
+        # Create a temporary file to capture both stdout and stderr
+        TEMP_OUTPUT=$(mktemp)
+        bun run ${{ github.action_path }}/src/entrypoints/prepare.ts 2>&1 | tee "$TEMP_OUTPUT"
+        PREPARE_EXIT_CODE=${PIPESTATUS[0]}
+
+        # If the command failed, save the error output
+        if [ $PREPARE_EXIT_CODE -ne 0 ]; then
+          # Extract last 50 lines of output as error details
+          ERROR_DETAILS=$(tail -n 50 "$TEMP_OUTPUT")
+          echo "prepare_error<<EOF" >> $GITHUB_OUTPUT
+          echo "$ERROR_DETAILS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+        fi
+
+        # Clean up temp file
+        rm -f "$TEMP_OUTPUT"
+
+        # Exit with the original exit code
+        exit $PREPARE_EXIT_CODE
       env:
         TRIGGER_PHRASE: ${{ inputs.trigger_phrase }}
         ASSIGNEE_TRIGGER: ${{ inputs.assignee_trigger }}
@@ -147,6 +166,8 @@ runs:
         CLAUDE_SUCCESS: ${{ steps.claude-code.outputs.conclusion == 'success' }}
         OUTPUT_FILE: ${{ steps.claude-code.outputs.execution_file || '' }}
         TRIGGER_USERNAME: ${{ github.event.comment.user.login || github.event.issue.user.login || github.event.pull_request.user.login || github.event.sender.login || github.triggering_actor || github.actor || '' }}
+        PREPARE_SUCCESS: ${{ steps.prepare.outcome == 'success' }}
+        PREPARE_ERROR: ${{ steps.prepare.outputs.prepare_error || '' }}
 
     - name: Display Claude Code Report
       if: steps.prepare.outputs.contains_trigger == 'true' && steps.claude-code.outputs.execution_file != ''
