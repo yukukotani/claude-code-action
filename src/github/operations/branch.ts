@@ -29,16 +29,6 @@ export async function setupBranch(
   const entityNumber = context.entityNumber;
   const isPR = context.isPR;
 
-  // Get the default branch first
-  const repoResponse = await octokits.rest.repos.get({
-    owner,
-    repo,
-  });
-  const defaultBranch = repoResponse.data.default_branch;
-  
-  // Use the provided base branch or fall back to default branch
-  const sourceBranch = baseBranch || defaultBranch;
-
   if (isPR) {
     const prData = githubData.contextData as GitHubPullRequest;
     const prState = prData.state;
@@ -46,7 +36,7 @@ export async function setupBranch(
     // Check if PR is closed or merged
     if (prState === "CLOSED" || prState === "MERGED") {
       console.log(
-        `PR #${entityNumber} is ${prState}, creating new branch from default...`,
+        `PR #${entityNumber} is ${prState}, creating new branch from source...`,
       );
       // Fall through to create a new branch like we do for issues
     } else {
@@ -61,12 +51,36 @@ export async function setupBranch(
 
       console.log(`Successfully checked out PR branch for PR #${entityNumber}`);
 
-      // For open PRs, return branch info
+      // For open PRs, we need the actual default branch for the return value
+      const repoResponse = await octokits.rest.repos.get({
+        owner,
+        repo,
+      });
+      const defaultBranch = repoResponse.data.default_branch;
+
       return {
         defaultBranch,
         currentBranch: branchName,
       };
     }
+  }
+
+  // Determine source branch - use baseBranch if provided, otherwise fetch default
+  let sourceBranch: string;
+  let defaultBranch: string;
+  
+  if (baseBranch) {
+    // Use provided base branch for source
+    sourceBranch = baseBranch;
+    // We'll fetch default branch later only when needed for return/output
+  } else {
+    // No base branch provided, fetch the default branch to use as source
+    const repoResponse = await octokits.rest.repos.get({
+      owner,
+      repo,
+    });
+    defaultBranch = repoResponse.data.default_branch;
+    sourceBranch = defaultBranch;
   }
 
   // Creating a new branch for either an issue or closed/merged PR
@@ -109,6 +123,15 @@ export async function setupBranch(
     console.log(
       `Successfully created and checked out new branch: ${newBranch}`,
     );
+
+    // Fetch default branch only now if we haven't already (when baseBranch was provided)
+    if (baseBranch) {
+      const repoResponse = await octokits.rest.repos.get({
+        owner,
+        repo,
+      });
+      defaultBranch = repoResponse.data.default_branch;
+    }
 
     // Set outputs for GitHub Actions
     core.setOutput("CLAUDE_BRANCH", newBranch);
