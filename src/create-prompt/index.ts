@@ -61,13 +61,17 @@ export function buildDisallowedToolsString(
   allowedTools?: string,
 ): string {
   let disallowedTools = [...DISALLOWED_TOOLS];
-  
+
   // If user has explicitly allowed some hardcoded disallowed tools, remove them from disallowed list
   if (allowedTools) {
-    const allowedToolsArray = allowedTools.split(",").map(tool => tool.trim());
-    disallowedTools = disallowedTools.filter(tool => !allowedToolsArray.includes(tool));
+    const allowedToolsArray = allowedTools
+      .split(",")
+      .map((tool) => tool.trim());
+    disallowedTools = disallowedTools.filter(
+      (tool) => !allowedToolsArray.includes(tool),
+    );
   }
-  
+
   let allDisallowedTools = disallowedTools.join(",");
   if (customDisallowedTools) {
     if (allDisallowedTools) {
