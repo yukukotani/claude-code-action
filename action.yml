@@ -81,26 +81,7 @@ runs:
       id: prepare
       shell: bash
       run: |
-        set +e
-        # Create a temporary file to capture both stdout and stderr
-        TEMP_OUTPUT=$(mktemp)
-        bun run ${{ github.action_path }}/src/entrypoints/prepare.ts 2>&1 | tee "$TEMP_OUTPUT"
-        PREPARE_EXIT_CODE=${PIPESTATUS[0]}
-
-        # If the command failed, save the error output
-        if [ $PREPARE_EXIT_CODE -ne 0 ]; then
-          # Extract last 50 lines of output as error details
-          ERROR_DETAILS=$(tail -n 50 "$TEMP_OUTPUT")
-          echo "prepare_error<<EOF" >> $GITHUB_OUTPUT
-          echo "$ERROR_DETAILS" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-        fi
-
-        # Clean up temp file
-        rm -f "$TEMP_OUTPUT"
-
-        # Exit with the original exit code
-        exit $PREPARE_EXIT_CODE
+        bun run ${{ github.action_path }}/src/entrypoints/prepare.ts
       env:
         TRIGGER_PHRASE: ${{ inputs.trigger_phrase }}
         ASSIGNEE_TRIGGER: ${{ inputs.assignee_trigger }}

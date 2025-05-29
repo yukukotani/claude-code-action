@@ -45,8 +45,7 @@ describe("updateCommentBody", () => {
         currentBody: "Claude Code is working...",
         actionFailed: true,
         executionDetails: { duration_ms: 45000 },
-        errorDetails:
-          "fatal: not a git repository (or any of the parent directories): .git",
+        errorDetails: "Failed to fetch issue data",
       };
 
       const result = updateCommentBody(input);
@@ -54,7 +53,7 @@ describe("updateCommentBody", () => {
       expect(result).toContain("[View job]");
       expect(result).toContain("<details>");
       expect(result).toContain("<summary>Error details</summary>");
-      expect(result).toContain("fatal: not a git repository");
+      expect(result).toContain("Failed to fetch issue data");
       // Ensure error details come after the header/links
       const errorIndex = result.indexOf("<details>");
       const headerIndex = result.indexOf("**Claude encountered an error");
