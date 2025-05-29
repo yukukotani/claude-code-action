@@ -67,8 +67,8 @@ export async function setupBranch(
 
   // Determine source branch - use baseBranch if provided, otherwise fetch default
   let sourceBranch: string;
-  let defaultBranch: string;
-  
+  let defaultBranch: string | undefined;
+
   if (baseBranch) {
     // Use provided base branch for source
     sourceBranch = baseBranch;
@@ -85,7 +85,9 @@ export async function setupBranch(
 
   // Creating a new branch for either an issue or closed/merged PR
   const entityType = isPR ? "pr" : "issue";
-  console.log(`Creating new branch for ${entityType} #${entityNumber} from source branch: ${sourceBranch}...`);
+  console.log(
+    `Creating new branch for ${entityType} #${entityNumber} from source branch: ${sourceBranch}...`,
+  );
 
   const timestamp = new Date()
     .toISOString()
@@ -125,7 +127,7 @@ export async function setupBranch(
     );
 
     // Fetch default branch only now if we haven't already (when baseBranch was provided)
-    if (baseBranch) {
+    if (!defaultBranch) {
       const repoResponse = await octokits.rest.repos.get({
         owner,
         repo,
@@ -135,7 +137,7 @@ export async function setupBranch(
 
     // Set outputs for GitHub Actions
     core.setOutput("CLAUDE_BRANCH", newBranch);
-    core.setOutput("DEFAULT_BRANCH", defaultBranch);
+    core.setOutput("BASE_BRANCH", sourceBranch);
     return {
       defaultBranch,
       claudeBranch: newBranch,

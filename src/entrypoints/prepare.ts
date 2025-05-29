@@ -63,7 +63,12 @@ async function run() {
 
     // Step 8: Setup branch
     const baseBranch = process.env.BASE_BRANCH;
-    const branchInfo = await setupBranch(octokit, githubData, context, baseBranch);
+    const branchInfo = await setupBranch(
+      octokit,
+      githubData,
+      context,
+      baseBranch,
+    );
 
     // Step 9: Update initial comment with branch link (only for issues that created a new branch)
     if (branchInfo.claudeBranch) {
