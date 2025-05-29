@@ -240,7 +240,6 @@ describe("sanitizeContent", () => {
     expect(sanitized).not.toContain('title="');
     expect(sanitized).toContain("<div>Test</div>");
   });
-
 });
 
 describe("stripHtmlComments (legacy)", () => {

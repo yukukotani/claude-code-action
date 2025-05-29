@@ -58,7 +58,9 @@ Direction override test: ‮reversed‬ text should be normalized.`;
     expect(result).toContain("![](dashboard.png)");
     expect(result).toContain('<img src="graph.jpg">');
     expect(result).toContain("[documentation](https://docs.example.com)");
-    expect(result).toContain("The implementation should follow our standard patterns");
+    expect(result).toContain(
+      "The implementation should follow our standard patterns",
+    );
     expect(result).toContain("Hidden encoded content");
     expect(result).toContain('<input type="text" />');
   });
@@ -105,9 +107,9 @@ I've updated the proposal based on your suggestions.
     expect(result).not.toContain("<!-- Internal note");
     expect(result).not.toContain("api reference");
     expect(result).not.toContain("comment metadata");
-    expect(result).not.toContain("data-comment-type=\"review\"");
+    expect(result).not.toContain('data-comment-type="review"');
     expect(result).not.toContain("status update");
-    expect(result).not.toContain("data-status=\"approved\"");
+    expect(result).not.toContain('data-status="approved"');
     expect(result).not.toContain("\u200B");
     expect(result).not.toContain("&#84;");
 
@@ -115,11 +117,15 @@ I've updated the proposal based on your suggestions.
     expect(result).toContain("Great idea! Here are my thoughts:");
     expect(result).toContain("1. We should consider the performance impact");
     expect(result).toContain("2. The UI mockup looks good: ![](mockup.png)");
-    expect(result).toContain("3. Check the [API docs](https://api.example.com)");
+    expect(result).toContain(
+      "3. Check the [API docs](https://api.example.com)",
+    );
     expect(result).toContain("This change would affect multiple systems.");
     expect(result).toContain("Implementationshouldfollowbestpractices");
     expect(result).toContain("Thanks for the feedback!");
-    expect(result).toContain("I've updated the proposal based on your suggestions.");
+    expect(result).toContain(
+      "I've updated the proposal based on your suggestions.",
+    );
     expect(result).toContain("Test note: All systems checked.");
     expect(result).toContain("Ready for implementation");
     expect(result).toContain("[reviewer1 at");
