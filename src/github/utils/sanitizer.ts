@@ -52,6 +52,7 @@ export function normalizeHtmlEntities(content: string): string {
 }
 
 export function sanitizeContent(content: string): string {
+  content = stripHtmlComments(content);
   content = stripInvisibleCharacters(content);
   content = stripMarkdownImageAltText(content);
   content = stripMarkdownLinkTitles(content);

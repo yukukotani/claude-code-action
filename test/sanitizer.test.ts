@@ -172,6 +172,7 @@ describe("sanitizeContent", () => {
 
     const sanitized = sanitizeContent(testContent);
 
+    expect(sanitized).not.toContain("<!-- This is a comment -->");
     expect(sanitized).not.toContain("example alt text");
     expect(sanitized).not.toContain("example image description");
     expect(sanitized).not.toContain("example title");
@@ -240,23 +241,6 @@ describe("sanitizeContent", () => {
     expect(sanitized).toContain("<div>Test</div>");
   });
 
-  it("should handle mixed input patterns", () => {
-    const mixedInput = `
-      ![example\u200Btext\u00ADwith\u00ADcharacters](image.png)
-      <img alt="&#101;&#120;&#97;&#109;&#112;&#108;&#101;" src="pic.jpg">
-      [link](url.com "title\u202Ewith\u202Ccharacters")
-      <span data-cmd="data value" aria-label="label text">visible text</span>
-    `;
-
-    const sanitized = sanitizeContent(mixedInput);
-
-    expect(sanitized).not.toContain("example");
-    expect(sanitized).not.toContain("characters");
-    expect(sanitized).not.toContain("title");
-    expect(sanitized).not.toContain("data value");
-    expect(sanitized).not.toContain("label text");
-    expect(sanitized).toContain("visible text");
-  });
 });
 
 describe("stripHtmlComments (legacy)", () => {

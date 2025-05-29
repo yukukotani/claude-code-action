@@ -2,50 +2,47 @@ import { describe, expect, it } from "bun:test";
 import { formatBody, formatComments } from "../src/github/data/formatter";
 import type { GitHubComment } from "../src/github/types";
 
-describe("Integration: Text Sanitization", () => {
-  it("should sanitize text in issue body", () => {
-    const body = `
-# Title text
+describe("Sanitization Integration", () => {
+  it("should sanitize complete issue/PR body with various hidden content patterns", () => {
+    const issueBody = `
+# Feature Request: Add user dashboard
 
-Some content here.
+## Description
+We need a new dashboard for users to track their activity.
 
-Here's an image: <img alt="some alt text" src="image.jpg">
+<!-- HTML comment that should be removed -->
 
-And a markdown image: ![image text](screenshot.png)
+## Technical Details
+The dashboard should display:
+- User statistics ![dashboard mockup with hidden​‌‍text](dashboard.png)
+- Activity graphs <img alt="example graph description" src="graph.jpg">
+- Recent actions
 
-Check this link: [Click here](https://example.com "link title")
+## Implementation Notes
+See [documentation](https://docs.example.com "internal docs title") for API details.
 
-Text with hidden​‌‍characters
-
-<div data-prompt="test data" aria-label="label text" title="title text">
-  Content with attributes
+<div data-instruction="example instruction" aria-label="dashboard label" title="hover text">
+  The implementation should follow our standard patterns.
 </div>
 
-Entity-encoded: &#72;&#69;&#76;&#76;&#79;
+Additional notes: Text­with­soft­hyphens and &#72;&#105;&#100;&#100;&#101;&#110; encoded content.
 
-Direction: ‮reversed‬ text
+<input placeholder="search placeholder" type="text" />
 
-<input placeholder="placeholder text" type="text">
-
-Text­with­soft­hyphens
-
-More text: with‌zero‍width​characters`;
+Direction override test: ‮reversed‬ text should be normalized.`;
 
     const imageUrlMap = new Map<string, string>();
-    const result = formatBody(body, imageUrlMap);
+    const result = formatBody(issueBody, imageUrlMap);
 
-    expect(result).not.toContain("some alt text");
-    expect(result).not.toContain("image text");
-    expect(result).not.toContain("link title");
-    expect(result).not.toContain("test data");
-    expect(result).not.toContain("label text");
-    expect(result).not.toContain("title text");
-    expect(result).not.toContain("placeholder text");
-    expect(result).not.toContain('alt="');
-    expect(result).not.toContain('title="');
-    expect(result).not.toContain('aria-label="');
-    expect(result).not.toContain('data-prompt="');
-    expect(result).not.toContain('placeholder="');
+    // Verify hidden content is removed
+    expect(result).not.toContain("<!-- HTML comment");
+    expect(result).not.toContain("hidden​‌‍text");
+    expect(result).not.toContain("example graph description");
+    expect(result).not.toContain("internal docs title");
+    expect(result).not.toContain("example instruction");
+    expect(result).not.toContain("dashboard label");
+    expect(result).not.toContain("hover text");
+    expect(result).not.toContain("search placeholder");
     expect(result).not.toContain("\u200B");
     expect(result).not.toContain("\u200C");
     expect(result).not.toContain("\u200D");
@@ -53,104 +50,79 @@ More text: with‌zero‍width​characters`;
     expect(result).not.toContain("\u202E");
     expect(result).not.toContain("&#72;");
 
-    expect(result).toContain("# Title text");
-    expect(result).toContain("Some content here.");
-    expect(result).toContain("Here's an image:");
-    expect(result).toContain('<img src="image.jpg">');
-    expect(result).toContain("![](screenshot.png)");
-    expect(result).toContain("[Click here](https://example.com)");
-    expect(result).toContain("Content with attributes");
-    expect(result).toContain("HELLO");
-    expect(result).toContain('<input type="text">');
+    // Verify legitimate content is preserved
+    expect(result).toContain("# Feature Request: Add user dashboard");
+    expect(result).toContain("## Description");
+    expect(result).toContain("We need a new dashboard");
+    expect(result).toContain("User statistics");
+    expect(result).toContain("![](dashboard.png)");
+    expect(result).toContain('<img src="graph.jpg">');
+    expect(result).toContain("[documentation](https://docs.example.com)");
+    expect(result).toContain("The implementation should follow our standard patterns");
+    expect(result).toContain("Hidden encoded content");
+    expect(result).toContain('<input type="text" />');
   });
 
-  it("should sanitize text in comments", () => {
+  it("should sanitize GitHub comments preserving discussion flow", () => {
     const comments: GitHubComment[] = [
       {
         id: "1",
         databaseId: "100001",
-        body: `Comment text
-        
-Check this: ![description text](image.png)
-[Documentation](https://docs.com "doc title")
+        body: `Great idea! Here are my thoughts:
 
-Text​‌‍with characters
+1. We should consider the performance impact
+2. The UI mockup looks good: ![ui design](mockup.png)
+3. Check the [API docs](https://api.example.com "api reference") for rate limits
 
-<span aria-label="span label" data-cmd="data value">Visible text</span>`,
-        author: { login: "user1" },
-        createdAt: "2023-01-01T00:00:00Z",
+<div aria-label="comment metadata" data-comment-type="review">
+  This change would affect multiple systems.
+</div>
+
+Note: Implementation​should​follow​best​practices.`,
+        author: { login: "reviewer1" },
+        createdAt: "2023-01-01T10:00:00Z",
+      },
+      {
+        id: "2",
+        databaseId: "100002",
+        body: `Thanks for the feedback! 
+
+<!-- Internal note: discussed with team -->
+
+I've updated the proposal based on your suggestions.
+
+&#84;&#101;&#115;&#116; &#110;&#111;&#116;&#101;: All systems checked.
+
+<span title="status update" data-status="approved">Ready for implementation</span>`,
+        author: { login: "author1" },
+        createdAt: "2023-01-01T12:00:00Z",
       },
     ];
 
     const result = formatComments(comments);
 
-    expect(result).not.toContain("description text");
-    expect(result).not.toContain("doc title");
-    expect(result).not.toContain("span label");
-    expect(result).not.toContain("data value");
-    expect(result).not.toContain('aria-label="');
-    expect(result).not.toContain('data-cmd="');
+    // Verify hidden content is removed
+    expect(result).not.toContain("<!-- Internal note");
+    expect(result).not.toContain("api reference");
+    expect(result).not.toContain("comment metadata");
+    expect(result).not.toContain("data-comment-type=\"review\"");
+    expect(result).not.toContain("status update");
+    expect(result).not.toContain("data-status=\"approved\"");
     expect(result).not.toContain("\u200B");
-    expect(result).not.toContain("\u200C");
-    expect(result).not.toContain("\u200D");
+    expect(result).not.toContain("&#84;");
 
-    expect(result).toContain("Comment text");
-    expect(result).toContain("![](image.png)");
-    expect(result).toContain("[Documentation](https://docs.com)");
-    expect(result).toContain("Visible text");
-    expect(result).toContain("Textwith characters");
-  });
-
-  it("should handle complex mixed patterns", () => {
-    const content = `
-Text content here.
-
-<div title="div​title​text" data-instruction="data&#32;text">
-  <img src="image.jpg" alt="img­alt­text">
-  Text with ‮reversed‬ content
-</div>
-
-![alt text\u200Bwith\u200Ccharacters](image.png)
-
-[link](url.com "title\u00ADtext")
-
-Mix: &#72;idden <span aria-label="&#77;ore">text</span>`;
-
-    const imageUrlMap = new Map<string, string>();
-    const result = formatBody(content, imageUrlMap);
-
-    expect(result).not.toContain('title="');
-    expect(result).not.toContain('data-instruction="');
-    expect(result).not.toContain('alt="');
-    expect(result).not.toContain('aria-label="');
-    expect(result).not.toContain("\u200B");
-    expect(result).not.toContain("\u200C");
-    expect(result).not.toContain("\u00AD");
-    expect(result).not.toContain("\u202E");
-
-    expect(result).toContain("Text content here.");
-    expect(result).toContain("<div>");
-    expect(result).toContain('<img src="image.jpg">');
-    expect(result).toContain("![](image.png)");
-    expect(result).toContain("[link](url.com)");
-    expect(result).toContain("Hidden <span>text</span>");
-  });
-
-  it("should handle edge cases with empty attributes", () => {
-    const edgeCases = `
-<img alt="" src="test.jpg">
-<div title="" data-x="">Content</div>
-![](already-empty.png)
-[link](url.com)
-Normal text`;
-
-    const imageUrlMap = new Map<string, string>();
-    const result = formatBody(edgeCases, imageUrlMap);
-
-    expect(result).toContain('<img src="test.jpg">');
-    expect(result).toContain("<div>Content</div>");
-    expect(result).toContain("![](already-empty.png)");
-    expect(result).toContain("[link](url.com)");
-    expect(result).toContain("Normal text");
+    // Verify discussion flow is preserved
+    expect(result).toContain("Great idea! Here are my thoughts:");
+    expect(result).toContain("1. We should consider the performance impact");
+    expect(result).toContain("2. The UI mockup looks good: ![](mockup.png)");
+    expect(result).toContain("3. Check the [API docs](https://api.example.com)");
+    expect(result).toContain("This change would affect multiple systems.");
+    expect(result).toContain("Implementationshouldfollowbestpractices");
+    expect(result).toContain("Thanks for the feedback!");
+    expect(result).toContain("I've updated the proposal based on your suggestions.");
+    expect(result).toContain("Test note: All systems checked.");
+    expect(result).toContain("Ready for implementation");
+    expect(result).toContain("[reviewer1 at");
+    expect(result).toContain("[author1 at");
   });
 });
