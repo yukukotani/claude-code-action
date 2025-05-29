@@ -1,0 +1,6 @@
+{
+  "text": "# Test Rendering\n\n\![](https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png)\n\nThe image above has no alt text but should still render.",
+  "mode": "gfm",
+  "context": "anthropics/claude-code-action"
+}
+EOF < /dev/null
