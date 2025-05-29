@@ -14,7 +14,7 @@ import type { Octokits } from "../api/client";
 import type { FetchDataResult } from "../data/fetcher";
 
 export type BranchInfo = {
-  defaultBranch: string;
+  baseBranch: string;
   claudeBranch?: string;
   currentBranch: string;
 };
@@ -23,10 +23,10 @@ export async function setupBranch(
   octokits: Octokits,
   githubData: FetchDataResult,
   context: ParsedGitHubContext,
-  baseBranch?: string,
 ): Promise<BranchInfo> {
   const { owner, repo } = context.repository;
   const entityNumber = context.entityNumber;
+  const { baseBranch } = context.inputs;
   const isPR = context.isPR;
 
   if (isPR) {
@@ -51,15 +51,11 @@ export async function setupBranch(
 
       console.log(`Successfully checked out PR branch for PR #${entityNumber}`);
 
-      // For open PRs, we need the actual default branch for the return value
-      const repoResponse = await octokits.rest.repos.get({
-        owner,
-        repo,
-      });
-      const defaultBranch = repoResponse.data.default_branch;
+      // For open PRs, we need to get the base branch of the PR
+      const baseBranch = prData.baseRefName;
 
       return {
-        defaultBranch,
+        baseBranch,
         currentBranch: branchName,
       };
     }
@@ -67,20 +63,17 @@ export async function setupBranch(
 
   // Determine source branch - use baseBranch if provided, otherwise fetch default
   let sourceBranch: string;
-  let defaultBranch: string | undefined;
 
   if (baseBranch) {
     // Use provided base branch for source
     sourceBranch = baseBranch;
-    // We'll fetch default branch later only when needed for return/output
   } else {
     // No base branch provided, fetch the default branch to use as source
     const repoResponse = await octokits.rest.repos.get({
       owner,
       repo,
     });
-    defaultBranch = repoResponse.data.default_branch;
-    sourceBranch = defaultBranch;
+    sourceBranch = repoResponse.data.default_branch;
   }
 
   // Creating a new branch for either an issue or closed/merged PR
@@ -126,20 +119,11 @@ export async function setupBranch(
       `Successfully created and checked out new branch: ${newBranch}`,
     );
 
-    // Fetch default branch only now if we haven't already (when baseBranch was provided)
-    if (!defaultBranch) {
-      const repoResponse = await octokits.rest.repos.get({
-        owner,
-        repo,
-      });
-      defaultBranch = repoResponse.data.default_branch;
-    }
-
     // Set outputs for GitHub Actions
     core.setOutput("CLAUDE_BRANCH", newBranch);
     core.setOutput("BASE_BRANCH", sourceBranch);
     return {
-      defaultBranch,
+      baseBranch: sourceBranch,
       claudeBranch: newBranch,
       currentBranch: newBranch,
     };

@@ -62,13 +62,7 @@ async function run() {
     });
 
     // Step 8: Setup branch
-    const baseBranch = process.env.BASE_BRANCH;
-    const branchInfo = await setupBranch(
-      octokit,
-      githubData,
-      context,
-      baseBranch,
-    );
+    const branchInfo = await setupBranch(octokit, githubData, context);
 
     // Step 9: Update initial comment with branch link (only for issues that created a new branch)
     if (branchInfo.claudeBranch) {
@@ -83,7 +77,7 @@ async function run() {
     // Step 10: Create prompt file
     await createPrompt(
       commentId,
-      branchInfo.defaultBranch,
+      branchInfo.baseBranch,
       branchInfo.claudeBranch,
       githubData,
       context,
