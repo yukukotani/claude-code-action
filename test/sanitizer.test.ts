@@ -44,9 +44,9 @@ describe("stripMarkdownImageAltText", () => {
     expect(stripMarkdownImageAltText("![example alt text](image.png)")).toBe(
       "![](image.png)",
     );
-    expect(stripMarkdownImageAltText("Text ![description](pic.jpg) more text")).toBe(
-      "Text ![](pic.jpg) more text",
-    );
+    expect(
+      stripMarkdownImageAltText("Text ![description](pic.jpg) more text"),
+    ).toBe("Text ![](pic.jpg) more text");
   });
 
   it("should handle multiple images", () => {
@@ -83,9 +83,9 @@ describe("stripMarkdownLinkTitles", () => {
 
 describe("stripHiddenAttributes", () => {
   it("should remove alt attributes", () => {
-    expect(stripHiddenAttributes('<img alt="example text" src="pic.jpg">')).toBe(
-      '<img src="pic.jpg">',
-    );
+    expect(
+      stripHiddenAttributes('<img alt="example text" src="pic.jpg">'),
+    ).toBe('<img src="pic.jpg">');
     expect(stripHiddenAttributes("<img alt='example' src=\"pic.jpg\">")).toBe(
       '<img src="pic.jpg">',
     );
@@ -261,7 +261,9 @@ describe("sanitizeContent", () => {
 
 describe("stripHtmlComments (legacy)", () => {
   it("should remove HTML comments", () => {
-    expect(stripHtmlComments("Hello <!-- example -->World")).toBe("Hello World");
+    expect(stripHtmlComments("Hello <!-- example -->World")).toBe(
+      "Hello World",
+    );
     expect(stripHtmlComments("<!-- comment -->Text")).toBe("Text");
     expect(stripHtmlComments("Text<!-- comment -->")).toBe("Text");
   });

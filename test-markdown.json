@@ -3,4 +3,3 @@
   "mode": "gfm",
   "context": "anthropics/claude-code-action"
 }
-EOF < /dev/null
