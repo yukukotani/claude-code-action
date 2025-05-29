@@ -183,7 +183,7 @@ export function updateCommentBody(input: CommentUpdateInput): string {
 
   // Add error details if available
   if (actionFailed && errorDetails) {
-    newBody += `\n\n<details>\n<summary>Error details</summary>\n\n\`\`\`\n${errorDetails}\n\`\`\`\n\n</details>`;
+    newBody += `\n\n\`\`\`\n${errorDetails}\n\`\`\``;
   }
 
   newBody += `\n\n---\n`;

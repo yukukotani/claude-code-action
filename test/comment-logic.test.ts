@@ -51,11 +51,9 @@ describe("updateCommentBody", () => {
       const result = updateCommentBody(input);
       expect(result).toContain("**Claude encountered an error after 45s**");
       expect(result).toContain("[View job]");
-      expect(result).toContain("<details>");
-      expect(result).toContain("<summary>Error details</summary>");
-      expect(result).toContain("Failed to fetch issue data");
+      expect(result).toContain("```\nFailed to fetch issue data\n```");
       // Ensure error details come after the header/links
-      const errorIndex = result.indexOf("<details>");
+      const errorIndex = result.indexOf("```");
       const headerIndex = result.indexOf("**Claude encountered an error");
       expect(errorIndex).toBeGreaterThan(headerIndex);
     });
