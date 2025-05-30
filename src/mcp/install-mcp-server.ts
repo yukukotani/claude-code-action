@@ -46,25 +46,29 @@ export async function prepareMcpConfig(
       try {
         const additionalConfig = JSON.parse(additionalMcpConfig);
 
-        // Merge mcpServers objects, with additional config overriding base config
-        if (additionalConfig.mcpServers) {
-          baseMcpConfig.mcpServers = {
-            ...baseMcpConfig.mcpServers,
-            ...additionalConfig.mcpServers,
-          };
+        // Validate that parsed JSON is an object
+        if (typeof additionalConfig !== "object" || additionalConfig === null) {
+          throw new Error("MCP config must be a valid JSON object");
         }
 
-        // Merge any other top-level properties from additional config
+        // Merge configurations with user config overriding built-in servers
         const mergedConfig = {
           ...baseMcpConfig,
           ...additionalConfig,
-          mcpServers: baseMcpConfig.mcpServers, // Ensure mcpServers uses the merged version
+          mcpServers: {
+            ...baseMcpConfig.mcpServers,
+            ...additionalConfig.mcpServers,
+          },
         };
 
         return JSON.stringify(mergedConfig, null, 2);
       } catch (parseError) {
+        const configPreview =
+          additionalMcpConfig.length > 100
+            ? `${additionalMcpConfig.substring(0, 100)}...`
+            : additionalMcpConfig;
         core.warning(
-          `Failed to parse additional MCP config: ${parseError}. Using base config only.`,
+          `Failed to parse additional MCP config: ${parseError}. Invalid config: "${configPreview}". Using base config only.`,
         );
       }
     }
