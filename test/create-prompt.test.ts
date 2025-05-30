@@ -636,7 +636,8 @@ describe("buildAllowedToolsString", () => {
     expect(result).toContain("LS");
     expect(result).toContain("Read");
     expect(result).toContain("Write");
-    expect(result).toContain("mcp__github__update_issue_comment");
+    expect(result).toContain("mcp__github_file_ops__update_claude_comment");
+    expect(result).not.toContain("mcp__github__update_issue_comment");
     expect(result).not.toContain("mcp__github__update_pull_request_comment");
     expect(result).toContain("mcp__github_file_ops__commit_files");
     expect(result).toContain("mcp__github_file_ops__delete_files");
@@ -660,8 +661,9 @@ describe("buildAllowedToolsString", () => {
     expect(result).toContain("LS");
     expect(result).toContain("Read");
     expect(result).toContain("Write");
+    expect(result).toContain("mcp__github_file_ops__update_claude_comment");
     expect(result).not.toContain("mcp__github__update_issue_comment");
-    expect(result).toContain("mcp__github__update_pull_request_comment");
+    expect(result).not.toContain("mcp__github__update_pull_request_comment");
     expect(result).toContain("mcp__github_file_ops__commit_files");
     expect(result).toContain("mcp__github_file_ops__delete_files");
   });
