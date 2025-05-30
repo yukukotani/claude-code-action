@@ -439,6 +439,122 @@ server.tool(
   },
 );
 
+// Update Claude comment tool
+server.tool(
+  "update_claude_comment",
+  "Update the Claude comment with progress and results (automatically handles both issue and PR comments)",
+  {
+    body: z.string().describe("The updated comment content"),
+  },
+  async ({ body }) => {
+    try {
+      const githubToken = process.env.GITHUB_TOKEN;
+      const claudeCommentId = process.env.CLAUDE_COMMENT_ID;
+      const eventName = process.env.GITHUB_EVENT_NAME;
+      const isPR = process.env.IS_PR === "true";
+
+      if (!githubToken) {
+        throw new Error("GITHUB_TOKEN environment variable is required");
+      }
+      if (!claudeCommentId) {
+        throw new Error("CLAUDE_COMMENT_ID environment variable is required");
+      }
+
+      const owner = REPO_OWNER;
+      const repo = REPO_NAME;
+      const commentId = parseInt(claudeCommentId, 10);
+
+      // Determine if this is a PR review comment based on event type
+      const isPullRequestReviewComment =
+        eventName === "pull_request_review_comment";
+
+      let response;
+      let updateUrl: string;
+
+      if (isPullRequestReviewComment) {
+        // Use the PR review comment API
+        updateUrl = `${GITHUB_API_URL}/repos/${owner}/${repo}/pulls/comments/${commentId}`;
+      } else {
+        // Use the issue comment API (works for both issues and PR general comments)
+        updateUrl = `${GITHUB_API_URL}/repos/${owner}/${repo}/issues/comments/${commentId}`;
+      }
+
+      response = await fetch(updateUrl, {
+        method: "PATCH",
+        headers: {
+          Accept: "application/vnd.github+json",
+          Authorization: `Bearer ${githubToken}`,
+          "X-GitHub-Api-Version": "2022-11-28",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ body }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+
+        // If PR review comment update fails, fall back to issue comment API
+        if (isPullRequestReviewComment && response.status === 404) {
+          const fallbackUrl = `${GITHUB_API_URL}/repos/${owner}/${repo}/issues/comments/${commentId}`;
+          response = await fetch(fallbackUrl, {
+            method: "PATCH",
+            headers: {
+              Accept: "application/vnd.github+json",
+              Authorization: `Bearer ${githubToken}`,
+              "X-GitHub-Api-Version": "2022-11-28",
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ body }),
+          });
+
+          if (!response.ok) {
+            const fallbackErrorText = await response.text();
+            throw new Error(
+              `Failed to update comment: ${response.status} - ${fallbackErrorText}`,
+            );
+          }
+        } else {
+          throw new Error(
+            `Failed to update comment: ${response.status} - ${errorText}`,
+          );
+        }
+      }
+
+      const updatedComment = await response.json();
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                id: updatedComment.id,
+                html_url: updatedComment.html_url,
+                updated_at: updatedComment.updated_at,
+              },
+              null,
+              2,
+            ),
+          },
+        ],
+      };
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error: ${errorMessage}`,
+          },
+        ],
+        error: errorMessage,
+        isError: true,
+      };
+    }
+  },
+);
+
 async function runServer() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
