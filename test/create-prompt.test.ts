@@ -8,7 +8,6 @@ import {
   buildDisallowedToolsString,
 } from "../src/create-prompt";
 import type { PreparedContext } from "../src/create-prompt";
-import type { EventData } from "../src/create-prompt/types";
 
 describe("generatePrompt", () => {
   const mockGitHubData = {
@@ -619,15 +618,7 @@ describe("getEventTypeAndContext", () => {
 
 describe("buildAllowedToolsString", () => {
   test("should return issue comment tool for regular events", () => {
-    const mockEventData: EventData = {
-      eventName: "issue_comment",
-      commentId: "123",
-      isPR: true,
-      prNumber: "456",
-      commentBody: "Test comment",
-    };
-
-    const result = buildAllowedToolsString(mockEventData);
+    const result = buildAllowedToolsString();
 
     // The base tools should be in the result
     expect(result).toContain("Edit");
@@ -644,15 +635,7 @@ describe("buildAllowedToolsString", () => {
   });
 
   test("should return PR comment tool for inline review comments", () => {
-    const mockEventData: EventData = {
-      eventName: "pull_request_review_comment",
-      isPR: true,
-      prNumber: "456",
-      commentBody: "Test review comment",
-      commentId: "789",
-    };
-
-    const result = buildAllowedToolsString(mockEventData);
+    const result = buildAllowedToolsString();
 
     // The base tools should be in the result
     expect(result).toContain("Edit");
@@ -669,16 +652,8 @@ describe("buildAllowedToolsString", () => {
   });
 
   test("should append custom tools when provided", () => {
-    const mockEventData: EventData = {
-      eventName: "issue_comment",
-      commentId: "123",
-      isPR: true,
-      prNumber: "456",
-      commentBody: "Test comment",
-    };
-
     const customTools = "Tool1,Tool2,Tool3";
-    const result = buildAllowedToolsString(mockEventData, customTools);
+    const result = buildAllowedToolsString(customTools);
 
     // Base tools should be present
     expect(result).toContain("Edit");

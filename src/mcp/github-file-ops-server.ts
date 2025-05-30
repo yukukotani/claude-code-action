@@ -7,6 +7,7 @@ import { readFile } from "fs/promises";
 import { join } from "path";
 import fetch from "node-fetch";
 import { GITHUB_API_URL } from "../github/api/config";
+import { Octokit } from "@octokit/rest";
 
 type GitHubRef = {
   object: {
@@ -451,7 +452,6 @@ server.tool(
       const githubToken = process.env.GITHUB_TOKEN;
       const claudeCommentId = process.env.CLAUDE_COMMENT_ID;
       const eventName = process.env.GITHUB_EVENT_NAME;
-      const isPR = process.env.IS_PR === "true";
 
       if (!githubToken) {
         throw new Error("GITHUB_TOKEN environment variable is required");
@@ -464,63 +464,48 @@ server.tool(
       const repo = REPO_NAME;
       const commentId = parseInt(claudeCommentId, 10);
 
+      // Create Octokit instance
+      const octokit = new Octokit({
+        auth: githubToken,
+      });
+
       // Determine if this is a PR review comment based on event type
       const isPullRequestReviewComment =
         eventName === "pull_request_review_comment";
 
       let response;
-      let updateUrl: string;
 
-      if (isPullRequestReviewComment) {
-        // Use the PR review comment API
-        updateUrl = `${GITHUB_API_URL}/repos/${owner}/${repo}/pulls/comments/${commentId}`;
-      } else {
-        // Use the issue comment API (works for both issues and PR general comments)
-        updateUrl = `${GITHUB_API_URL}/repos/${owner}/${repo}/issues/comments/${commentId}`;
-      }
-
-      response = await fetch(updateUrl, {
-        method: "PATCH",
-        headers: {
-          Accept: "application/vnd.github+json",
-          Authorization: `Bearer ${githubToken}`,
-          "X-GitHub-Api-Version": "2022-11-28",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ body }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-
-        // If PR review comment update fails, fall back to issue comment API
-        if (isPullRequestReviewComment && response.status === 404) {
-          const fallbackUrl = `${GITHUB_API_URL}/repos/${owner}/${repo}/issues/comments/${commentId}`;
-          response = await fetch(fallbackUrl, {
-            method: "PATCH",
-            headers: {
-              Accept: "application/vnd.github+json",
-              Authorization: `Bearer ${githubToken}`,
-              "X-GitHub-Api-Version": "2022-11-28",
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ body }),
+      try {
+        if (isPullRequestReviewComment) {
+          // Try PR review comment API first
+          response = await octokit.rest.pulls.updateReviewComment({
+            owner,
+            repo,
+            comment_id: commentId,
+            body,
           });
-
-          if (!response.ok) {
-            const fallbackErrorText = await response.text();
-            throw new Error(
-              `Failed to update comment: ${response.status} - ${fallbackErrorText}`,
-            );
-          }
         } else {
-          throw new Error(
-            `Failed to update comment: ${response.status} - ${errorText}`,
-          );
+          // Use issue comment API (works for both issues and PR general comments)
+          response = await octokit.rest.issues.updateComment({
+            owner,
+            repo,
+            comment_id: commentId,
+            body,
+          });
+        }
+      } catch (error: any) {
+        // If PR review comment update fails with 404, fall back to issue comment API
+        if (isPullRequestReviewComment && error.status === 404) {
+          response = await octokit.rest.issues.updateComment({
+            owner,
+            repo,
+            comment_id: commentId,
+            body,
+          });
+        } else {
+          throw error;
         }
       }
-
-      const updatedComment = await response.json();
 
       return {
         content: [
@@ -528,9 +513,9 @@ server.tool(
             type: "text",
             text: JSON.stringify(
               {
-                id: updatedComment.id,
-                html_url: updatedComment.html_url,
-                updated_at: updatedComment.updated_at,
+                id: response.data.id,
+                html_url: response.data.html_url,
+                updated_at: response.data.updated_at,
               },
               null,
               2,

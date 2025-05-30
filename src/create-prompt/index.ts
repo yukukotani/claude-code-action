@@ -35,10 +35,7 @@ const BASE_ALLOWED_TOOLS = [
 ];
 const DISALLOWED_TOOLS = ["WebSearch", "WebFetch"];
 
-export function buildAllowedToolsString(
-  eventData: EventData,
-  customAllowedTools?: string,
-): string {
+export function buildAllowedToolsString(customAllowedTools?: string): string {
   let baseTools = [...BASE_ALLOWED_TOOLS];
 
   let allAllowedTools = baseTools.join(",");
@@ -639,7 +636,6 @@ export async function createPrompt(
 
     // Set allowed tools
     const allAllowedTools = buildAllowedToolsString(
-      preparedContext.eventData,
       preparedContext.allowedTools,
     );
     const allDisallowedTools = buildDisallowedToolsString(
