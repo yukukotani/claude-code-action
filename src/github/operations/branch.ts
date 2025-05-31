@@ -88,19 +88,36 @@ export async function setupBranch(
   if (!isPR) {
     // Check for existing Claude branches for this issue
     try {
-      const { data: branches } = await octokits.rest.repos.listBranches({
+      // Use GraphQL to efficiently search for branches with a specific prefix
+      const query = `
+        query($owner: String!, $repo: String!, $prefix: String!) {
+          repository(owner: $owner, name: $repo) {
+            refs(refPrefix: "refs/heads/", query: $prefix, first: 100) {
+              nodes {
+                name
+              }
+            }
+          }
+        }
+      `;
+      
+      const response = await octokits.graphql<{
+        repository: {
+          refs: {
+            nodes: Array<{ name: string }>;
+          };
+        };
+      }>(query, {
         owner,
         repo,
-        per_page: 100,
+        prefix: `claude/issue-${entityNumber}-`,
       });
       
-      // Look for existing branches with pattern claude/issue-{entityNumber}-*
-      const existingBranch = branches.find(branch => 
-        branch.name.startsWith(`claude/issue-${entityNumber}-`)
-      );
+      const branches = response.repository.refs.nodes;
       
-      if (existingBranch) {
-        branchToUse = existingBranch.name;
+      if (branches.length > 0) {
+        // Use the first matching branch (could be sorted by date in future)
+        branchToUse = branches[0].name;
         isReusedBranch = true;
         console.log(`Found existing Claude branch for issue #${entityNumber}: ${branchToUse}`);
       }
