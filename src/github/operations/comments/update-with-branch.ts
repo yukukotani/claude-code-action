@@ -38,7 +38,7 @@ export async function updateTrackingComment(
   // Update the existing comment with the branch link
   try {
     const isPRReviewComment = isPullRequestReviewCommentEvent(context);
-    
+
     await updateClaudeComment(octokit, {
       owner,
       repo,
@@ -46,7 +46,7 @@ export async function updateTrackingComment(
       body: updatedBody,
       isPullRequestReviewComment: isPRReviewComment,
     });
-    
+
     console.log(
       `✅ Updated ${isPRReviewComment ? "PR review" : "issue"} comment ${commentId} with branch link`,
     );

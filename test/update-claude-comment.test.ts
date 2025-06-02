@@ -3,7 +3,6 @@ import { Octokit } from "@octokit/rest";
 import {
   updateClaudeComment,
   type UpdateClaudeCommentParams,
-  type UpdateClaudeCommentResult,
 } from "../src/github/operations/comments/update-claude-comment";
 
 describe("updateClaudeComment", () => {
@@ -33,7 +32,9 @@ describe("updateClaudeComment", () => {
     };
 
     // @ts-expect-error Mock implementation doesn't match full type signature
-    mockOctokit.rest.issues.updateComment = jest.fn().mockResolvedValue(mockResponse);
+    mockOctokit.rest.issues.updateComment = jest
+      .fn()
+      .mockResolvedValue(mockResponse);
 
     const params: UpdateClaudeCommentParams = {
       owner: "testowner",
@@ -70,7 +71,9 @@ describe("updateClaudeComment", () => {
     };
 
     // @ts-expect-error Mock implementation doesn't match full type signature
-    mockOctokit.rest.issues.updateComment = jest.fn().mockResolvedValue(mockResponse);
+    mockOctokit.rest.issues.updateComment = jest
+      .fn()
+      .mockResolvedValue(mockResponse);
 
     const params: UpdateClaudeCommentParams = {
       owner: "testowner",
@@ -107,7 +110,9 @@ describe("updateClaudeComment", () => {
     };
 
     // @ts-expect-error Mock implementation doesn't match full type signature
-    mockOctokit.rest.pulls.updateReviewComment = jest.fn().mockResolvedValue(mockResponse);
+    mockOctokit.rest.pulls.updateReviewComment = jest
+      .fn()
+      .mockResolvedValue(mockResponse);
 
     const params: UpdateClaudeCommentParams = {
       owner: "testowner",
@@ -147,9 +152,13 @@ describe("updateClaudeComment", () => {
     };
 
     // @ts-expect-error Mock implementation doesn't match full type signature
-    mockOctokit.rest.pulls.updateReviewComment = jest.fn().mockRejectedValue(mockError);
+    mockOctokit.rest.pulls.updateReviewComment = jest
+      .fn()
+      .mockRejectedValue(mockError);
     // @ts-expect-error Mock implementation doesn't match full type signature
-    mockOctokit.rest.issues.updateComment = jest.fn().mockResolvedValue(mockResponse);
+    mockOctokit.rest.issues.updateComment = jest
+      .fn()
+      .mockResolvedValue(mockResponse);
 
     const params: UpdateClaudeCommentParams = {
       owner: "testowner",
@@ -187,7 +196,9 @@ describe("updateClaudeComment", () => {
     mockError.status = 500;
 
     // @ts-expect-error Mock implementation doesn't match full type signature
-    mockOctokit.rest.pulls.updateReviewComment = jest.fn().mockRejectedValue(mockError);
+    mockOctokit.rest.pulls.updateReviewComment = jest
+      .fn()
+      .mockRejectedValue(mockError);
 
     const params: UpdateClaudeCommentParams = {
       owner: "testowner",
@@ -197,7 +208,9 @@ describe("updateClaudeComment", () => {
       isPullRequestReviewComment: true,
     };
 
-    await expect(updateClaudeComment(mockOctokit, params)).rejects.toEqual(mockError);
+    await expect(updateClaudeComment(mockOctokit, params)).rejects.toEqual(
+      mockError,
+    );
 
     expect(mockOctokit.rest.pulls.updateReviewComment).toHaveBeenCalledWith({
       owner: "testowner",
@@ -214,7 +227,9 @@ describe("updateClaudeComment", () => {
     const mockError = new Error("Forbidden");
 
     // @ts-expect-error Mock implementation doesn't match full type signature
-    mockOctokit.rest.issues.updateComment = jest.fn().mockRejectedValue(mockError);
+    mockOctokit.rest.issues.updateComment = jest
+      .fn()
+      .mockRejectedValue(mockError);
 
     const params: UpdateClaudeCommentParams = {
       owner: "testowner",
@@ -224,7 +239,9 @@ describe("updateClaudeComment", () => {
       isPullRequestReviewComment: false,
     };
 
-    await expect(updateClaudeComment(mockOctokit, params)).rejects.toEqual(mockError);
+    await expect(updateClaudeComment(mockOctokit, params)).rejects.toEqual(
+      mockError,
+    );
 
     expect(mockOctokit.rest.issues.updateComment).toHaveBeenCalledWith({
       owner: "testowner",
@@ -245,7 +262,9 @@ describe("updateClaudeComment", () => {
     };
 
     // @ts-expect-error Mock implementation doesn't match full type signature
-    mockOctokit.rest.issues.updateComment = jest.fn().mockResolvedValue(mockResponse);
+    mockOctokit.rest.issues.updateComment = jest
+      .fn()
+      .mockResolvedValue(mockResponse);
 
     const params: UpdateClaudeCommentParams = {
       owner: "testowner",
@@ -276,7 +295,9 @@ describe("updateClaudeComment", () => {
     };
 
     // @ts-expect-error Mock implementation doesn't match full type signature
-    mockOctokit.rest.issues.updateComment = jest.fn().mockResolvedValue(mockResponse);
+    mockOctokit.rest.issues.updateComment = jest
+      .fn()
+      .mockResolvedValue(mockResponse);
 
     const params: UpdateClaudeCommentParams = {
       owner: "testowner",
@@ -325,7 +346,9 @@ const code = "example";
     };
 
     // @ts-expect-error Mock implementation doesn't match full type signature
-    mockOctokit.rest.issues.updateComment = jest.fn().mockResolvedValue(mockResponse);
+    mockOctokit.rest.issues.updateComment = jest
+      .fn()
+      .mockResolvedValue(mockResponse);
 
     const params: UpdateClaudeCommentParams = {
       owner: "testowner",
@@ -366,7 +389,9 @@ const code = "example";
     };
 
     // @ts-expect-error Mock implementation doesn't match full type signature
-    mockOctokit.rest.pulls.updateReviewComment = jest.fn().mockResolvedValue(mockResponse);
+    mockOctokit.rest.pulls.updateReviewComment = jest
+      .fn()
+      .mockResolvedValue(mockResponse);
 
     const params: UpdateClaudeCommentParams = {
       owner: "testowner",

@@ -9,8 +9,17 @@ type PrepareConfigParams = {
   claudeCommentId?: string;
 };
 
-export async function prepareMcpConfig(params: PrepareConfigParams): Promise<string> {
-  const { githubToken, owner, repo, branch, additionalMcpConfig, claudeCommentId } = params;
+export async function prepareMcpConfig(
+  params: PrepareConfigParams,
+): Promise<string> {
+  const {
+    githubToken,
+    owner,
+    repo,
+    branch,
+    additionalMcpConfig,
+    claudeCommentId,
+  } = params;
   try {
     const baseMcpConfig = {
       mcpServers: {
