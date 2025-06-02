@@ -207,7 +207,7 @@ async function run() {
 
     // Update the comment using the extracted updateClaudeComment function
     try {
-      await updateClaudeComment(octokit, {
+      await updateClaudeComment(octokit.rest, {
         owner,
         repo,
         commentId,
