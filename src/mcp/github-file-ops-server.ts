@@ -8,6 +8,7 @@ import { join } from "path";
 import fetch from "node-fetch";
 import { GITHUB_API_URL } from "../github/api/config";
 import { Octokit } from "@octokit/rest";
+import { updateClaudeComment } from "../github/operations/comments/update-claude-comment";
 
 type GitHubRef = {
   object: {
@@ -473,53 +474,19 @@ server.tool(
       const isPullRequestReviewComment =
         eventName === "pull_request_review_comment";
 
-      let response;
-
-      try {
-        if (isPullRequestReviewComment) {
-          // Try PR review comment API first
-          response = await octokit.rest.pulls.updateReviewComment({
-            owner,
-            repo,
-            comment_id: commentId,
-            body,
-          });
-        } else {
-          // Use issue comment API (works for both issues and PR general comments)
-          response = await octokit.rest.issues.updateComment({
-            owner,
-            repo,
-            comment_id: commentId,
-            body,
-          });
-        }
-      } catch (error: any) {
-        // If PR review comment update fails with 404, fall back to issue comment API
-        if (isPullRequestReviewComment && error.status === 404) {
-          response = await octokit.rest.issues.updateComment({
-            owner,
-            repo,
-            comment_id: commentId,
-            body,
-          });
-        } else {
-          throw error;
-        }
-      }
+      const result = await updateClaudeComment(octokit, {
+        owner,
+        repo,
+        commentId,
+        body,
+        isPullRequestReviewComment,
+      });
 
       return {
         content: [
           {
             type: "text",
-            text: JSON.stringify(
-              {
-                id: response.data.id,
-                html_url: response.data.html_url,
-                updated_at: response.data.updated_at,
-              },
-              null,
-              2,
-            ),
+            text: JSON.stringify(result, null, 2),
           },
         ],
       };
