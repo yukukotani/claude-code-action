@@ -94,7 +94,7 @@ jobs:
 
 The `mcp_config` input allows you to add custom MCP (Model Context Protocol) servers to extend Claude's capabilities. These servers merge with the built-in GitHub MCP servers.
 
-Example: Adding a sequential thinking server:
+#### Basic Example: Adding a Sequential Thinking Server
 
 ```yaml
 - uses: anthropics/claude-code-action@beta
@@ -112,10 +112,38 @@ Example: Adding a sequential thinking server:
           }
         }
       }
+    allowed_tools: "mcp__sequential-thinking__sequentialthinking" # Important: Each MCP tool from your server must be listed here, comma-separated
     # ... other inputs
 ```
 
-This configuration adds the sequential thinking MCP server, which provides Claude with enhanced problem-solving capabilities. Your custom servers will override any built-in servers with the same name.
+#### Passing Secrets to MCP Servers
+
+For MCP servers that require sensitive information like API keys or tokens, use GitHub Secrets in the environment variables:
+
+```yaml
+- uses: anthropics/claude-code-action@beta
+  with:
+    anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+    mcp_config: |
+      {
+        "mcpServers": {
+          "custom-api-server": {
+            "command": "npx",
+            "args": ["-y", "@example/api-server"],
+            "env": {
+              "API_KEY": "${{ secrets.CUSTOM_API_KEY }}",
+              "BASE_URL": "https://api.example.com"
+            }
+          }
+        }
+      }
+    # ... other inputs
+```
+
+**Important**:
+
+- Always use GitHub Secrets (`${{ secrets.SECRET_NAME }}`) for sensitive values like API keys, tokens, or passwords. Never hardcode secrets directly in the workflow file.
+- Your custom servers will override any built-in servers with the same name.
 
 ## Examples
 

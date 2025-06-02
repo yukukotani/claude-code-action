@@ -51,7 +51,9 @@ export async function prepareMcpConfig(
           throw new Error("MCP config must be a valid JSON object");
         }
 
-        core.info("Merging additional MCP server configuration with built-in servers");
+        core.info(
+          "Merging additional MCP server configuration with built-in servers",
+        );
 
         // Merge configurations with user config overriding built-in servers
         const mergedConfig = {
