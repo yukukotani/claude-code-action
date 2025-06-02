@@ -205,7 +205,6 @@ async function run() {
 
     const updatedBody = updateCommentBody(commentInput);
 
-    // Update the comment using the extracted updateClaudeComment function
     try {
       await updateClaudeComment(octokit.rest, {
         owner,

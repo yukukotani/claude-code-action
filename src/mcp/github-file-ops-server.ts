@@ -441,7 +441,6 @@ server.tool(
   },
 );
 
-// Update Claude comment tool
 server.tool(
   "update_claude_comment",
   "Update the Claude comment with progress and results (automatically handles both issue and PR comments)",
@@ -465,12 +464,10 @@ server.tool(
       const repo = REPO_NAME;
       const commentId = parseInt(claudeCommentId, 10);
 
-      // Create Octokit instance
       const octokit = new Octokit({
         auth: githubToken,
       });
 
-      // Determine if this is a PR review comment based on event type
       const isPullRequestReviewComment =
         eventName === "pull_request_review_comment";
 
