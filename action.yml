@@ -12,9 +12,17 @@ inputs:
   assignee_trigger:
     description: "The assignee username that triggers the action (e.g. @claude)"
     required: false
+  label_trigger:
+    description: "The label that triggers the action (e.g. claude)"
+    required: false
+    default: "claude"
   base_branch:
     description: "The branch to use as the base/source when creating new branches (defaults to repository default branch)"
     required: false
+  branch_prefix:
+    description: "The prefix to use for Claude branches (defaults to 'claude/', use 'claude-' for dash format)"
+    required: false
+    default: "claude/"
   allow_bot_users:
     description: "Allow bot users (users ending with [bot]) to trigger the action. Default is false for security reasons."
     required: false
@@ -26,6 +34,9 @@ inputs:
     required: false
   anthropic_model:
     description: "DEPRECATED: Use 'model' instead. Model to use (provider-specific format required for Bedrock/Vertex)"
+    required: false
+  fallback_model:
+    description: "Enable automatic fallback to specified model when primary model is unavailable"
     required: false
   allowed_tools:
     description: "Additional tools for Claude to use (the base GitHub tools will always be included)"
@@ -45,6 +56,10 @@ inputs:
     default: ""
   mcp_config:
     description: "Additional MCP configuration (JSON string) that merges with the built-in GitHub MCP servers"
+  additional_permissions:
+    description: "Additional permissions to enable. Currently supports 'actions: read' for viewing workflow results"
+    required: false
+    default: ""
   claude_env:
     description: "Custom environment variables to pass to Claude Code execution (YAML format)"
     required: false
@@ -53,6 +68,9 @@ inputs:
   # Auth configuration
   anthropic_api_key:
     description: "Anthropic API key (required for direct API, not needed for Bedrock/Vertex)"
+    required: false
+  claude_code_oauth_token:
+    description: "Claude Code OAuth token (alternative to anthropic_api_key)"
     required: false
   github_token:
     description: "GitHub token with repo and pull request permissions (optional if using GitHub App)"
@@ -74,6 +92,14 @@ inputs:
     description: "Timeout in minutes for execution"
     required: false
     default: "30"
+  use_sticky_comment:
+    description: "Use just one comment to deliver issue/PR comments"
+    required: false
+    default: "false"
+  use_commit_signing:
+    description: "Enable commit signing using GitHub's commit signature verification. When false, Claude uses standard git commands"
+    required: false
+    default: "false"
 
 outputs:
   execution_file:
@@ -102,7 +128,9 @@ runs:
       env:
         TRIGGER_PHRASE: ${{ inputs.trigger_phrase }}
         ASSIGNEE_TRIGGER: ${{ inputs.assignee_trigger }}
+        LABEL_TRIGGER: ${{ inputs.label_trigger }}
         BASE_BRANCH: ${{ inputs.base_branch }}
+        BRANCH_PREFIX: ${{ inputs.branch_prefix }}
         ALLOWED_TOOLS: ${{ inputs.allowed_tools }}
         DISALLOWED_TOOLS: ${{ inputs.disallowed_tools }}
         CUSTOM_INSTRUCTIONS: ${{ inputs.custom_instructions }}
@@ -111,11 +139,15 @@ runs:
         OVERRIDE_GITHUB_TOKEN: ${{ inputs.github_token }}
         ALLOW_BOT_USERS: ${{ inputs.allow_bot_users }}
         GITHUB_RUN_ID: ${{ github.run_id }}
+        USE_STICKY_COMMENT: ${{ inputs.use_sticky_comment }}
+        ACTIONS_TOKEN: ${{ github.token }}
+        ADDITIONAL_PERMISSIONS: ${{ inputs.additional_permissions }}
+        USE_COMMIT_SIGNING: ${{ inputs.use_commit_signing }}
 
     - name: Run Claude Code
       id: claude-code
       if: steps.prepare.outputs.contains_trigger == 'true'
-      uses: anthropics/claude-code-base-action@a0d79f9c1798b06292dbc80f8f95cf742ce7a213 # v0.0.14
+      uses: anthropics/claude-code-base-action@0f7a229cb06f840f77f49df0b711ee0060868c2c # v0.0.33
       with:
         prompt_file: ${{ runner.temp }}/claude-prompts/claude-prompt.txt
         allowed_tools: ${{ env.ALLOWED_TOOLS }}
@@ -123,15 +155,18 @@ runs:
         timeout_minutes: ${{ inputs.timeout_minutes }}
         max_turns: ${{ inputs.max_turns }}
         model: ${{ inputs.model || inputs.anthropic_model }}
+        fallback_model: ${{ inputs.fallback_model }}
         mcp_config: ${{ steps.prepare.outputs.mcp_config }}
         use_bedrock: ${{ inputs.use_bedrock }}
         use_vertex: ${{ inputs.use_vertex }}
         anthropic_api_key: ${{ inputs.anthropic_api_key }}
+        claude_code_oauth_token: ${{ inputs.claude_code_oauth_token }}
         claude_env: ${{ inputs.claude_env }}
       env:
         # Model configuration
         ANTHROPIC_MODEL: ${{ inputs.model || inputs.anthropic_model }}
         GITHUB_TOKEN: ${{ steps.prepare.outputs.GITHUB_TOKEN }}
+        NODE_VERSION: ${{ env.NODE_VERSION }}
 
         # Provider configuration
         ANTHROPIC_BASE_URL: ${{ env.ANTHROPIC_BASE_URL }}
@@ -175,15 +210,25 @@ runs:
         TRIGGER_USERNAME: ${{ github.event.comment.user.login || github.event.issue.user.login || github.event.pull_request.user.login || github.event.sender.login || github.triggering_actor || github.actor || '' }}
         PREPARE_SUCCESS: ${{ steps.prepare.outcome == 'success' }}
         PREPARE_ERROR: ${{ steps.prepare.outputs.prepare_error || '' }}
+        USE_STICKY_COMMENT: ${{ inputs.use_sticky_comment }}
+        USE_COMMIT_SIGNING: ${{ inputs.use_commit_signing }}
 
     - name: Display Claude Code Report
       if: steps.prepare.outputs.contains_trigger == 'true' && steps.claude-code.outputs.execution_file != ''
       shell: bash
       run: |
-        echo "## Claude Code Report" >> $GITHUB_STEP_SUMMARY
-        echo '```json' >> $GITHUB_STEP_SUMMARY
-        cat "${{ steps.claude-code.outputs.execution_file }}" >> $GITHUB_STEP_SUMMARY
-        echo '```' >> $GITHUB_STEP_SUMMARY
+        # Try to format the turns, but if it fails, dump the raw JSON
+        if bun run ${{ github.action_path }}/src/entrypoints/format-turns.ts "${{ steps.claude-code.outputs.execution_file }}" >> $GITHUB_STEP_SUMMARY 2>/dev/null; then
+          echo "Successfully formatted Claude Code report"
+        else
+          echo "## Claude Code Report (Raw Output)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Failed to format output (please report). Here's the raw JSON:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo '```json' >> $GITHUB_STEP_SUMMARY
+          cat "${{ steps.claude-code.outputs.execution_file }}" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+        fi
 
     - name: Revoke app token
       if: always() && inputs.github_token == ''

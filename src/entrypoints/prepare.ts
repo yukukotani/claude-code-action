@@ -12,7 +12,7 @@ import { checkHumanActor } from "../github/validation/actor";
 import { checkWritePermissions } from "../github/validation/permissions";
 import { createInitialComment } from "../github/operations/comments/create-initial";
 import { setupBranch } from "../github/operations/branch";
-import { updateTrackingComment } from "../github/operations/comments/update-with-branch";
+import { configureGitAuth } from "../github/operations/git-config";
 import { prepareMcpConfig } from "../mcp/install-mcp-server";
 import { createPrompt } from "../create-prompt";
 import { createOctokit } from "../github/api/client";
@@ -52,7 +52,8 @@ async function run() {
     await checkHumanActor(octokit.rest, context, allowBotUsers);
 
     // Step 6: Create initial tracking comment
-    const commentId = await createInitialComment(octokit.rest, context);
+    const commentData = await createInitialComment(octokit.rest, context);
+    const commentId = commentData.id;
 
     // Step 7: Fetch GitHub data (once for both branch setup and prompt creation)
     const githubData = await fetchGitHubData({
@@ -60,19 +61,20 @@ async function run() {
       repository: `${context.repository.owner}/${context.repository.repo}`,
       prNumber: context.entityNumber.toString(),
       isPR: context.isPR,
+      triggerUsername: context.actor,
     });
 
     // Step 8: Setup branch
     const branchInfo = await setupBranch(octokit, githubData, context);
 
-    // Step 9: Update initial comment with branch link (only for issues that created a new branch)
-    if (branchInfo.claudeBranch) {
-      await updateTrackingComment(
-        octokit,
-        context,
-        commentId,
-        branchInfo.claudeBranch,
-      );
+    // Step 9: Configure git authentication if not using commit signing
+    if (!context.inputs.useCommitSigning) {
+      try {
+        await configureGitAuth(githubToken, context, commentData.user);
+      } catch (error) {
+        console.error("Failed to configure git authentication:", error);
+        throw error;
+      }
     }
 
     // Step 10: Create prompt file
@@ -94,6 +96,7 @@ async function run() {
       additionalMcpConfig,
       claudeCommentId: commentId.toString(),
       allowedTools: context.inputs.allowedTools,
+      context,
     });
     core.setOutput("mcp_config", mcpConfig);
   } catch (error) {

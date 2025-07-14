@@ -26,7 +26,7 @@ export async function setupBranch(
 ): Promise<BranchInfo> {
   const { owner, repo } = context.repository;
   const entityNumber = context.entityNumber;
-  const { baseBranch } = context.inputs;
+  const { baseBranch, branchPrefix } = context.inputs;
   const isPR = context.isPR;
 
   if (isPR) {
@@ -45,9 +45,16 @@ export async function setupBranch(
 
       const branchName = prData.headRefName;
 
-      // Execute git commands to checkout PR branch (shallow fetch for performance)
-      // Fetch the branch with a depth of 20 to avoid fetching too much history, while still allowing for some context
-      await $`git fetch origin --depth=20 ${branchName}`;
+      // Determine optimal fetch depth based on PR commit count, with a minimum of 20
+      const commitCount = prData.commits.totalCount;
+      const fetchDepth = Math.max(commitCount, 20);
+
+      console.log(
+        `PR #${entityNumber}: ${commitCount} commits, using fetch depth ${fetchDepth}`,
+      );
+
+      // Execute git commands to checkout PR branch (dynamic depth based on PR size)
+      await $`git fetch origin --depth=${fetchDepth} ${branchName}`;
       await $`git checkout ${branchName}`;
 
       console.log(`Successfully checked out PR branch for PR #${entityNumber}`);
@@ -77,12 +84,8 @@ export async function setupBranch(
     sourceBranch = repoResponse.data.default_branch;
   }
 
-  // Creating a new branch for either an issue or closed/merged PR
+  // Generate branch name for either an issue or closed/merged PR
   const entityType = isPR ? "pr" : "issue";
-  console.log(
-    `Creating new branch for ${entityType} #${entityNumber} from source branch: ${sourceBranch}...`,
-  );
-
   const timestamp = new Date()
     .toISOString()
     .replace(/[:-]/g, "")
@@ -90,10 +93,10 @@ export async function setupBranch(
     .split("T")
     .join("_");
 
-  const newBranch = `claude/${entityType}-${entityNumber}-${timestamp}`;
+  const newBranch = `${branchPrefix}${entityType}-${entityNumber}-${timestamp}`;
 
   try {
-    // Get the SHA of the source branch
+    // Get the SHA of the source branch to verify it exists
     const sourceBranchRef = await octokits.rest.git.getRef({
       owner,
       repo,
@@ -101,23 +104,34 @@ export async function setupBranch(
     });
 
     const currentSHA = sourceBranchRef.data.object.sha;
+    console.log(`Source branch SHA: ${currentSHA}`);
 
-    console.log(`Current SHA: ${currentSHA}`);
+    // For commit signing, defer branch creation to the file ops server
+    if (context.inputs.useCommitSigning) {
+      console.log(
+        `Branch name generated: ${newBranch} (will be created by file ops server on first commit)`,
+      );
 
-    // Create branch using GitHub API
-    await octokits.rest.git.createRef({
-      owner,
-      repo,
-      ref: `refs/heads/${newBranch}`,
-      sha: currentSHA,
-    });
+      // Set outputs for GitHub Actions
+      core.setOutput("CLAUDE_BRANCH", newBranch);
+      core.setOutput("BASE_BRANCH", sourceBranch);
+      return {
+        baseBranch: sourceBranch,
+        claudeBranch: newBranch,
+        currentBranch: sourceBranch, // Stay on source branch for now
+      };
+    }
 
-    // Checkout the new branch (shallow fetch for performance)
-    await $`git fetch origin --depth=1 ${newBranch}`;
-    await $`git checkout ${newBranch}`;
+    // For non-signing case, create and checkout the branch locally only
+    console.log(
+      `Creating local branch ${newBranch} for ${entityType} #${entityNumber} from source branch: ${sourceBranch}...`,
+    );
+
+    // Create and checkout the new branch locally
+    await $`git checkout -b ${newBranch}`;
 
     console.log(
-      `Successfully created and checked out new branch: ${newBranch}`,
+      `Successfully created and checked out local branch: ${newBranch}`,
     );
 
     // Set outputs for GitHub Actions
@@ -129,7 +143,7 @@ export async function setupBranch(
       currentBranch: newBranch,
     };
   } catch (error) {
-    console.error("Error creating branch:", error);
+    console.error("Error in branch setup:", error);
     process.exit(1);
   }
 }

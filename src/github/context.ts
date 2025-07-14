@@ -1,6 +1,7 @@
 import * as github from "@actions/github";
 import type {
   IssuesEvent,
+  IssuesAssignedEvent,
   IssueCommentEvent,
   PullRequestEvent,
   PullRequestReviewEvent,
@@ -28,11 +29,16 @@ export type ParsedGitHubContext = {
   inputs: {
     triggerPhrase: string;
     assigneeTrigger: string;
+    labelTrigger: string;
     allowedTools: string[];
     disallowedTools: string[];
     customInstructions: string;
     directPrompt: string;
     baseBranch?: string;
+    branchPrefix: string;
+    useStickyComment: boolean;
+    additionalPermissions: Map<string, string>;
+    useCommitSigning: boolean;
   };
 };
 
@@ -52,17 +58,18 @@ export function parseGitHubContext(): ParsedGitHubContext {
     inputs: {
       triggerPhrase: process.env.TRIGGER_PHRASE ?? "@claude",
       assigneeTrigger: process.env.ASSIGNEE_TRIGGER ?? "",
-      allowedTools: (process.env.ALLOWED_TOOLS ?? "")
-        .split(",")
-        .map((tool) => tool.trim())
-        .filter((tool) => tool.length > 0),
-      disallowedTools: (process.env.DISALLOWED_TOOLS ?? "")
-        .split(",")
-        .map((tool) => tool.trim())
-        .filter((tool) => tool.length > 0),
+      labelTrigger: process.env.LABEL_TRIGGER ?? "",
+      allowedTools: parseMultilineInput(process.env.ALLOWED_TOOLS ?? ""),
+      disallowedTools: parseMultilineInput(process.env.DISALLOWED_TOOLS ?? ""),
       customInstructions: process.env.CUSTOM_INSTRUCTIONS ?? "",
       directPrompt: process.env.DIRECT_PROMPT ?? "",
       baseBranch: process.env.BASE_BRANCH,
+      branchPrefix: process.env.BRANCH_PREFIX ?? "claude/",
+      useStickyComment: process.env.USE_STICKY_COMMENT === "true",
+      additionalPermissions: parseAdditionalPermissions(
+        process.env.ADDITIONAL_PERMISSIONS ?? "",
+      ),
+      useCommitSigning: process.env.USE_COMMIT_SIGNING === "true",
     },
   };
 
@@ -116,6 +123,33 @@ export function parseGitHubContext(): ParsedGitHubContext {
   }
 }
 
+export function parseMultilineInput(s: string): string[] {
+  return s
+    .split(/,|[\n\r]+/)
+    .map((tool) => tool.replace(/#.+$/, ""))
+    .map((tool) => tool.trim())
+    .filter((tool) => tool.length > 0);
+}
+
+export function parseAdditionalPermissions(s: string): Map<string, string> {
+  const permissions = new Map<string, string>();
+  if (!s || !s.trim()) {
+    return permissions;
+  }
+
+  const lines = s.trim().split("\n");
+  for (const line of lines) {
+    const trimmedLine = line.trim();
+    if (trimmedLine) {
+      const [key, value] = trimmedLine.split(":").map((part) => part.trim());
+      if (key && value) {
+        permissions.set(key, value);
+      }
+    }
+  }
+  return permissions;
+}
+
 export function isIssuesEvent(
   context: ParsedGitHubContext,
 ): context is ParsedGitHubContext & { payload: IssuesEvent } {
@@ -144,4 +178,10 @@ export function isPullRequestReviewCommentEvent(
   context: ParsedGitHubContext,
 ): context is ParsedGitHubContext & { payload: PullRequestReviewCommentEvent } {
   return context.eventName === "pull_request_review_comment";
+}
+
+export function isIssuesAssignedEvent(
+  context: ParsedGitHubContext,
+): context is ParsedGitHubContext & { payload: IssuesAssignedEvent } {
+  return isIssuesEvent(context) && context.eventAction === "assigned";
 }
