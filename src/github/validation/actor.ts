@@ -11,7 +11,6 @@ import type { ParsedGitHubContext } from "../context";
 export async function checkHumanActor(
   octokit: Octokit,
   githubContext: ParsedGitHubContext,
-  allowedBots: string,
 ) {
   // Fetch user information from GitHub API
   const { data: userData } = await octokit.users.getByUsername({
@@ -24,6 +23,8 @@ export async function checkHumanActor(
 
   // Check bot permissions if actor is not a User
   if (actorType !== "User") {
+    const allowedBots = githubContext.inputs.allowedBots;
+
     // Parse allowed bots list
     const allowedBotsList = allowedBots
       .split(",")
