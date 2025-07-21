@@ -24,7 +24,7 @@ describe("checkHumanActor", () => {
     context.actor = "human-user";
 
     await expect(
-      checkHumanActor(mockOctokit, context, ""),
+      checkHumanActor(mockOctokit, context),
     ).resolves.toBeUndefined();
   });
 
@@ -32,8 +32,9 @@ describe("checkHumanActor", () => {
     const mockOctokit = createMockOctokit("Bot");
     const context = createMockContext();
     context.actor = "test-bot";
+    context.inputs.allowedBots = "";
 
-    await expect(checkHumanActor(mockOctokit, context, "")).rejects.toThrow(
+    await expect(checkHumanActor(mockOctokit, context)).rejects.toThrow(
       "Workflow initiated by non-human actor: test-bot (type: Bot). Add bot to allowed_bots list or use '*' to allow all bots.",
     );
   });
@@ -42,9 +43,10 @@ describe("checkHumanActor", () => {
     const mockOctokit = createMockOctokit("Bot");
     const context = createMockContext();
     context.actor = "test-bot";
+    context.inputs.allowedBots = "*";
 
     await expect(
-      checkHumanActor(mockOctokit, context, "*"),
+      checkHumanActor(mockOctokit, context),
     ).resolves.toBeUndefined();
   });
 
@@ -52,9 +54,10 @@ describe("checkHumanActor", () => {
     const mockOctokit = createMockOctokit("Bot");
     const context = createMockContext();
     context.actor = "dependabot";
+    context.inputs.allowedBots = "dependabot,renovate";
 
     await expect(
-      checkHumanActor(mockOctokit, context, "dependabot,renovate"),
+      checkHumanActor(mockOctokit, context),
     ).resolves.toBeUndefined();
   });
 
@@ -62,10 +65,9 @@ describe("checkHumanActor", () => {
     const mockOctokit = createMockOctokit("Bot");
     const context = createMockContext();
     context.actor = "other-bot";
+    context.inputs.allowedBots = "dependabot,renovate";
 
-    await expect(
-      checkHumanActor(mockOctokit, context, "dependabot,renovate"),
-    ).rejects.toThrow(
+    await expect(checkHumanActor(mockOctokit, context)).rejects.toThrow(
       "Workflow initiated by non-human actor: other-bot (type: Bot). Add bot to allowed_bots list or use '*' to allow all bots.",
     );
   });

@@ -71,6 +71,7 @@ describe("checkWritePermissions", () => {
       useStickyComment: false,
       additionalPermissions: new Map(),
       useCommitSigning: false,
+      allowedBots: "",
     },
   });
 
@@ -125,7 +126,23 @@ describe("checkWritePermissions", () => {
   });
 
   test("should return true for bot user", async () => {
-    const mockOctokit = createMockOctokit("none");
+    const mockOctokit = {
+      rest: {
+        apps: {
+          getRepoInstallation: async () => ({
+            data: { id: 12345 },
+          }),
+          getInstallation: async () => ({
+            data: {
+              permissions: {
+                contents: "write",
+                pull_requests: "write",
+              },
+            },
+          }),
+        },
+      },
+    } as any;
     const context = createContext();
     context.actor = "test-bot[bot]";
 
