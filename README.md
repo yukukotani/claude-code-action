@@ -39,6 +39,86 @@ This command will guide you through setting up the GitHub app and required secre
    - Or `CLAUDE_CODE_OAUTH_TOKEN` for OAuth token authentication (Pro and Max users can generate this by running `claude setup-token` locally)
 3. Copy the workflow file from [`examples/claude.yml`](./examples/claude.yml) into your repository's `.github/workflows/`
 
+### Using a Custom GitHub App
+
+If you prefer not to install the official Claude app, you can create your own GitHub App to use with this action. This gives you complete control over permissions and access.
+
+**When you may want to use a custom GitHub App:**
+
+- You need more restrictive permissions than the official app
+- Organization policies prevent installing third-party apps
+- You're using AWS Bedrock or Google Vertex AI
+
+**Steps to create and use a custom GitHub App:**
+
+1. **Create a new GitHub App:**
+
+   - Go to https://github.com/settings/apps (for personal apps) or your organization's settings
+   - Click "New GitHub App"
+   - Configure the app with these minimum permissions:
+     - **Repository permissions:**
+       - Contents: Read & Write
+       - Issues: Read & Write
+       - Pull requests: Read & Write
+     - **Account permissions:** None required
+   - Set "Where can this GitHub App be installed?" to your preference
+   - Create the app
+
+2. **Generate and download a private key:**
+
+   - After creating the app, scroll down to "Private keys"
+   - Click "Generate a private key"
+   - Download the `.pem` file (keep this secure!)
+
+3. **Install the app on your repository:**
+
+   - Go to the app's settings page
+   - Click "Install App"
+   - Select the repositories where you want to use Claude
+
+4. **Add the app credentials to your repository secrets:**
+
+   - Go to your repository's Settings → Secrets and variables → Actions
+   - Add these secrets:
+     - `APP_ID`: Your GitHub App's ID (found in the app settings)
+     - `APP_PRIVATE_KEY`: The contents of the downloaded `.pem` file
+
+5. **Update your workflow to use the custom app:**
+
+   ```yaml
+   name: Claude with Custom App
+   on:
+     issue_comment:
+       types: [created]
+     # ... other triggers
+
+   jobs:
+     claude-response:
+       runs-on: ubuntu-latest
+       steps:
+         # Generate a token from your custom app
+         - name: Generate GitHub App token
+           id: app-token
+           uses: actions/create-github-app-token@v1
+           with:
+             app-id: ${{ secrets.APP_ID }}
+             private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+         # Use Claude with your custom app's token
+         - uses: anthropics/claude-code-action@beta
+           with:
+             anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+             github_token: ${{ steps.app-token.outputs.token }}
+             # ... other configuration
+   ```
+
+**Important notes:**
+
+- The custom app must have read/write permissions for Issues, Pull Requests, and Contents
+- Your app's token will have the exact permissions you configured, nothing more
+
+For more information on creating GitHub Apps, see the [GitHub documentation](https://docs.github.com/en/apps/creating-github-apps).
+
 ## 📚 FAQ
 
 Having issues or questions? Check out our [Frequently Asked Questions](./FAQ.md) for solutions to common problems and detailed explanations of Claude's capabilities and limitations.
@@ -89,31 +169,35 @@ jobs:
 
 ## Inputs
 
-| Input                     | Description                                                                                                          | Required | Default   |
-| ------------------------- | -------------------------------------------------------------------------------------------------------------------- | -------- | --------- |
-| `anthropic_api_key`       | Anthropic API key (required for direct API, not needed for Bedrock/Vertex)                                           | No\*     | -         |
-| `claude_code_oauth_token` | Claude Code OAuth token (alternative to anthropic_api_key)                                                           | No\*     | -         |
-| `direct_prompt`           | Direct prompt for Claude to execute automatically without needing a trigger (for automated workflows)                | No       | -         |
-| `base_branch`             | The base branch to use for creating new branches (e.g., 'main', 'develop')                                           | No       | -         |
-| `max_turns`               | Maximum number of conversation turns Claude can take (limits back-and-forth exchanges)                               | No       | -         |
-| `timeout_minutes`         | Timeout in minutes for execution                                                                                     | No       | `30`      |
-| `use_sticky_comment`      | Use just one comment to deliver PR comments (only applies for pull_request event workflows)                          | No       | `false`   |
-| `github_token`            | GitHub token for Claude to operate with. **Only include this if you're connecting a custom GitHub app of your own!** | No       | -         |
-| `model`                   | Model to use (provider-specific format required for Bedrock/Vertex)                                                  | No       | -         |
-| `fallback_model`          | Enable automatic fallback to specified model when primary model is unavailable                                       | No       | -         |
-| `anthropic_model`         | **DEPRECATED**: Use `model` instead. Kept for backward compatibility.                                                | No       | -         |
-| `use_bedrock`             | Use Amazon Bedrock with OIDC authentication instead of direct Anthropic API                                          | No       | `false`   |
-| `use_vertex`              | Use Google Vertex AI with OIDC authentication instead of direct Anthropic API                                        | No       | `false`   |
-| `allowed_tools`           | Additional tools for Claude to use (the base GitHub tools will always be included)                                   | No       | ""        |
-| `disallowed_tools`        | Tools that Claude should never use                                                                                   | No       | ""        |
-| `custom_instructions`     | Additional custom instructions to include in the prompt for Claude                                                   | No       | ""        |
-| `mcp_config`              | Additional MCP configuration (JSON string) that merges with the built-in GitHub MCP servers                          | No       | ""        |
-| `assignee_trigger`        | The assignee username that triggers the action (e.g. @claude). Only used for issue assignment                        | No       | -         |
-| `label_trigger`           | The label name that triggers the action when applied to an issue (e.g. "claude")                                     | No       | -         |
-| `trigger_phrase`          | The trigger phrase to look for in comments, issue/PR bodies, and issue titles                                        | No       | `@claude` |
-| `branch_prefix`           | The prefix to use for Claude branches (defaults to 'claude/', use 'claude-' for dash format)                         | No       | `claude/` |
-| `claude_env`              | Custom environment variables to pass to Claude Code execution (YAML format)                                          | No       | ""        |
-| `additional_permissions`  | Additional permissions to enable. Currently supports 'actions: read' for viewing workflow results                    | No       | ""        |
+| Input                          | Description                                                                                                          | Required | Default   |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------- | -------- | --------- |
+| `anthropic_api_key`            | Anthropic API key (required for direct API, not needed for Bedrock/Vertex)                                           | No\*     | -         |
+| `claude_code_oauth_token`      | Claude Code OAuth token (alternative to anthropic_api_key)                                                           | No\*     | -         |
+| `direct_prompt`                | Direct prompt for Claude to execute automatically without needing a trigger (for automated workflows)                | No       | -         |
+| `override_prompt`              | Complete replacement of Claude's prompt with custom template (supports variable substitution)                        | No       | -         |
+| `base_branch`                  | The base branch to use for creating new branches (e.g., 'main', 'develop')                                           | No       | -         |
+| `max_turns`                    | Maximum number of conversation turns Claude can take (limits back-and-forth exchanges)                               | No       | -         |
+| `timeout_minutes`              | Timeout in minutes for execution                                                                                     | No       | `30`      |
+| `use_sticky_comment`           | Use just one comment to deliver PR comments (only applies for pull_request event workflows)                          | No       | `false`   |
+| `github_token`                 | GitHub token for Claude to operate with. **Only include this if you're connecting a custom GitHub app of your own!** | No       | -         |
+| `model`                        | Model to use (provider-specific format required for Bedrock/Vertex)                                                  | No       | -         |
+| `fallback_model`               | Enable automatic fallback to specified model when primary model is unavailable                                       | No       | -         |
+| `anthropic_model`              | **DEPRECATED**: Use `model` instead. Kept for backward compatibility.                                                | No       | -         |
+| `use_bedrock`                  | Use Amazon Bedrock with OIDC authentication instead of direct Anthropic API                                          | No       | `false`   |
+| `use_vertex`                   | Use Google Vertex AI with OIDC authentication instead of direct Anthropic API                                        | No       | `false`   |
+| `allowed_tools`                | Additional tools for Claude to use (the base GitHub tools will always be included)                                   | No       | ""        |
+| `disallowed_tools`             | Tools that Claude should never use                                                                                   | No       | ""        |
+| `custom_instructions`          | Additional custom instructions to include in the prompt for Claude                                                   | No       | ""        |
+| `mcp_config`                   | Additional MCP configuration (JSON string) that merges with the built-in GitHub MCP servers                          | No       | ""        |
+| `assignee_trigger`             | The assignee username that triggers the action (e.g. @claude). Only used for issue assignment                        | No       | -         |
+| `label_trigger`                | The label name that triggers the action when applied to an issue (e.g. "claude")                                     | No       | -         |
+| `trigger_phrase`               | The trigger phrase to look for in comments, issue/PR bodies, and issue titles                                        | No       | `@claude` |
+| `branch_prefix`                | The prefix to use for Claude branches (defaults to 'claude/', use 'claude-' for dash format)                         | No       | `claude/` |
+| `claude_env`                   | Custom environment variables to pass to Claude Code execution (YAML format)                                          | No       | ""        |
+| `settings`                     | Claude Code settings as JSON string or path to settings JSON file                                                    | No       | ""        |
+| `additional_permissions`       | Additional permissions to enable. Currently supports 'actions: read' for viewing workflow results                    | No       | ""        |
+| `experimental_allowed_domains` | Restrict network access to these domains only (newline-separated).                                                   | No       | ""        |
+| `use_commit_signing`           | Enable commit signing using GitHub's commit signature verification. When false, Claude uses standard git commands    | No       | `false`   |
 
 \*Required when using direct Anthropic API (default and when not using Bedrock or Vertex)
 
@@ -316,6 +400,36 @@ jobs:
 
 Perfect for automatically reviewing PRs from new team members, external contributors, or specific developers who need extra guidance.
 
+#### Custom Prompt Templates
+
+Use `override_prompt` for complete control over Claude's behavior with variable substitution:
+
+```yaml
+- uses: anthropics/claude-code-action@beta
+  with:
+    override_prompt: |
+      Analyze PR #$PR_NUMBER in $REPOSITORY for security vulnerabilities.
+
+      Changed files:
+      $CHANGED_FILES
+
+      Focus on:
+      - SQL injection risks
+      - XSS vulnerabilities
+      - Authentication bypasses
+      - Exposed secrets or credentials
+
+      Provide severity ratings (Critical/High/Medium/Low) for any issues found.
+```
+
+The `override_prompt` feature supports these variables:
+
+- `$REPOSITORY`, `$PR_NUMBER`, `$ISSUE_NUMBER`
+- `$PR_TITLE`, `$ISSUE_TITLE`, `$PR_BODY`, `$ISSUE_BODY`
+- `$PR_COMMENTS`, `$ISSUE_COMMENTS`, `$REVIEW_COMMENTS`
+- `$CHANGED_FILES`, `$TRIGGER_COMMENT`, `$TRIGGER_USERNAME`
+- `$BRANCH_NAME`, `$BASE_BRANCH`, `$EVENT_TYPE`, `$IS_PR`
+
 ## How It Works
 
 1. **Trigger Detection**: Listens for comments containing the trigger phrase (default: `@claude`) or issue assignment to a specific user
@@ -494,6 +608,130 @@ Use a specific Claude model:
     # model: "claude-3-5-sonnet-20241022"  # Optional: specify a different model
     # ... other inputs
 ```
+
+### Network Restrictions
+
+For enhanced security, you can restrict Claude's network access to specific domains only. This feature is particularly useful for:
+
+- Enterprise environments with strict security policies
+- Preventing access to external services
+- Limiting Claude to only your internal APIs and services
+
+When `experimental_allowed_domains` is set, Claude can only access the domains you explicitly list. You'll need to include the appropriate provider domains based on your authentication method.
+
+#### Provider-Specific Examples
+
+##### If using Anthropic API or subscription
+
+```yaml
+- uses: anthropics/claude-code-action@beta
+  with:
+    anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+    # Or: claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+    experimental_allowed_domains: |
+      .anthropic.com
+```
+
+##### If using AWS Bedrock
+
+```yaml
+- uses: anthropics/claude-code-action@beta
+  with:
+    use_bedrock: "true"
+    experimental_allowed_domains: |
+      bedrock.*.amazonaws.com
+      bedrock-runtime.*.amazonaws.com
+```
+
+##### If using Google Vertex AI
+
+```yaml
+- uses: anthropics/claude-code-action@beta
+  with:
+    use_vertex: "true"
+    experimental_allowed_domains: |
+      *.googleapis.com
+      vertexai.googleapis.com
+```
+
+#### Common GitHub Domains
+
+In addition to your provider domains, you may need to include GitHub-related domains. For GitHub.com users, common domains include:
+
+```yaml
+- uses: anthropics/claude-code-action@beta
+  with:
+    anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+    experimental_allowed_domains: |
+      .anthropic.com  # For Anthropic API
+      .github.com
+      .githubusercontent.com
+      ghcr.io
+      .blob.core.windows.net
+```
+
+For GitHub Enterprise users, replace the GitHub.com domains above with your enterprise domains (e.g., `.github.company.com`, `packages.company.com`, etc.).
+
+To determine which domains your workflow needs, you can temporarily run without restrictions and monitor the network requests, or check your GitHub Enterprise configuration for the specific services you use.
+
+### Claude Code Settings
+
+You can provide Claude Code settings to customize behavior such as model selection, environment variables, permissions, and hooks. Settings can be provided either as a JSON string or a path to a settings file.
+
+#### Option 1: Settings File
+
+```yaml
+- uses: anthropics/claude-code-action@beta
+  with:
+    settings: "path/to/settings.json"
+    # ... other inputs
+```
+
+#### Option 2: Inline Settings
+
+```yaml
+- uses: anthropics/claude-code-action@beta
+  with:
+    settings: |
+      {
+        "model": "claude-opus-4-20250514",
+        "env": {
+          "DEBUG": "true",
+          "API_URL": "https://api.example.com"
+        },
+        "permissions": {
+          "allow": ["Bash", "Read"],
+          "deny": ["WebFetch"]
+        },
+        "hooks": {
+          "PreToolUse": [{
+            "matcher": "Bash",
+            "hooks": [{
+              "type": "command",
+              "command": "echo Running bash command..."
+            }]
+          }]
+        }
+      }
+    # ... other inputs
+```
+
+The settings support all Claude Code settings options including:
+
+- `model`: Override the default model
+- `env`: Environment variables for the session
+- `permissions`: Tool usage permissions
+- `hooks`: Pre/post tool execution hooks
+- And more...
+
+For a complete list of available settings and their descriptions, see the [Claude Code settings documentation](https://docs.anthropic.com/en/docs/claude-code/settings).
+
+**Notes**:
+
+- The `enableAllProjectMcpServers` setting is always set to `true` by this action to ensure MCP servers work correctly.
+- If both the `model` input parameter and a `model` in settings are provided, the `model` input parameter takes precedence.
+- The `allowed_tools` and `disallowed_tools` input parameters take precedence over `permissions` in settings.
+- In a future version, we may deprecate individual input parameters in favor of using the settings file for all configuration.
 
 ## Cloud Providers
 

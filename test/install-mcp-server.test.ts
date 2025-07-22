@@ -31,6 +31,7 @@ describe("prepareMcpConfig", () => {
       disallowedTools: [],
       customInstructions: "",
       directPrompt: "",
+      overridePrompt: "",
       branchPrefix: "",
       useStickyComment: false,
       additionalPermissions: new Map(),
@@ -88,6 +89,7 @@ describe("prepareMcpConfig", () => {
       owner: "test-owner",
       repo: "test-repo",
       branch: "test-branch",
+      baseBranch: "main",
       allowedTools: [],
       context: mockContext,
     });
@@ -118,6 +120,7 @@ describe("prepareMcpConfig", () => {
       owner: "test-owner",
       repo: "test-repo",
       branch: "test-branch",
+      baseBranch: "main",
       allowedTools: [],
       context: contextWithSigning,
     });
@@ -143,6 +146,7 @@ describe("prepareMcpConfig", () => {
       owner: "test-owner",
       repo: "test-repo",
       branch: "test-branch",
+      baseBranch: "main",
       allowedTools: [
         "mcp__github__create_issue",
         "mcp__github_file_ops__commit_files",
@@ -174,6 +178,7 @@ describe("prepareMcpConfig", () => {
       owner: "test-owner",
       repo: "test-repo",
       branch: "test-branch",
+      baseBranch: "main",
       allowedTools: [
         "mcp__github_file_ops__commit_files",
         "mcp__github_file_ops__update_claude_comment",
@@ -193,6 +198,7 @@ describe("prepareMcpConfig", () => {
       owner: "test-owner",
       repo: "test-repo",
       branch: "test-branch",
+      baseBranch: "main",
       allowedTools: ["Edit", "Read", "Write"],
       context: mockContext,
     });
@@ -210,6 +216,7 @@ describe("prepareMcpConfig", () => {
       owner: "test-owner",
       repo: "test-repo",
       branch: "test-branch",
+      baseBranch: "main",
       additionalMcpConfig: "",
       allowedTools: [],
       context: mockContext,
@@ -228,6 +235,7 @@ describe("prepareMcpConfig", () => {
       owner: "test-owner",
       repo: "test-repo",
       branch: "test-branch",
+      baseBranch: "main",
       additionalMcpConfig: "   \n\t  ",
       allowedTools: [],
       context: mockContext,
@@ -258,6 +266,7 @@ describe("prepareMcpConfig", () => {
       owner: "test-owner",
       repo: "test-repo",
       branch: "test-branch",
+      baseBranch: "main",
       additionalMcpConfig: additionalConfig,
       allowedTools: [
         "mcp__github__create_issue",
@@ -296,6 +305,7 @@ describe("prepareMcpConfig", () => {
       owner: "test-owner",
       repo: "test-repo",
       branch: "test-branch",
+      baseBranch: "main",
       additionalMcpConfig: additionalConfig,
       allowedTools: [
         "mcp__github__create_issue",
@@ -337,6 +347,7 @@ describe("prepareMcpConfig", () => {
       owner: "test-owner",
       repo: "test-repo",
       branch: "test-branch",
+      baseBranch: "main",
       additionalMcpConfig: additionalConfig,
       allowedTools: [],
       context: mockContextWithSigning,
@@ -357,6 +368,7 @@ describe("prepareMcpConfig", () => {
       owner: "test-owner",
       repo: "test-repo",
       branch: "test-branch",
+      baseBranch: "main",
       additionalMcpConfig: invalidJson,
       allowedTools: [],
       context: mockContextWithSigning,
@@ -378,6 +390,7 @@ describe("prepareMcpConfig", () => {
       owner: "test-owner",
       repo: "test-repo",
       branch: "test-branch",
+      baseBranch: "main",
       additionalMcpConfig: nonObjectJson,
       allowedTools: [],
       context: mockContextWithSigning,
@@ -402,6 +415,7 @@ describe("prepareMcpConfig", () => {
       owner: "test-owner",
       repo: "test-repo",
       branch: "test-branch",
+      baseBranch: "main",
       additionalMcpConfig: nullJson,
       allowedTools: [],
       context: mockContextWithSigning,
@@ -426,6 +440,7 @@ describe("prepareMcpConfig", () => {
       owner: "test-owner",
       repo: "test-repo",
       branch: "test-branch",
+      baseBranch: "main",
       additionalMcpConfig: arrayJson,
       allowedTools: [],
       context: mockContextWithSigning,
@@ -473,6 +488,7 @@ describe("prepareMcpConfig", () => {
       owner: "test-owner",
       repo: "test-repo",
       branch: "test-branch",
+      baseBranch: "main",
       additionalMcpConfig: additionalConfig,
       allowedTools: [],
       context: mockContextWithSigning,
@@ -496,6 +512,7 @@ describe("prepareMcpConfig", () => {
       owner: "test-owner",
       repo: "test-repo",
       branch: "test-branch",
+      baseBranch: "main",
       allowedTools: [],
       context: mockContextWithSigning,
     });
@@ -517,6 +534,7 @@ describe("prepareMcpConfig", () => {
       owner: "test-owner",
       repo: "test-repo",
       branch: "test-branch",
+      baseBranch: "main",
       allowedTools: [],
       context: mockContextWithSigning,
     });
@@ -545,6 +563,7 @@ describe("prepareMcpConfig", () => {
       owner: "test-owner",
       repo: "test-repo",
       branch: "test-branch",
+      baseBranch: "main",
       allowedTools: [],
       context: contextWithPermissions,
     });
@@ -564,6 +583,7 @@ describe("prepareMcpConfig", () => {
       owner: "test-owner",
       repo: "test-repo",
       branch: "test-branch",
+      baseBranch: "main",
       allowedTools: [],
       context: mockContextWithSigning,
     });
@@ -582,6 +602,7 @@ describe("prepareMcpConfig", () => {
       owner: "test-owner",
       repo: "test-repo",
       branch: "test-branch",
+      baseBranch: "main",
       allowedTools: [],
       context: mockPRContextWithSigning,
     });
@@ -613,6 +634,7 @@ describe("prepareMcpConfig", () => {
       owner: "test-owner",
       repo: "test-repo",
       branch: "test-branch",
+      baseBranch: "main",
       allowedTools: [],
       context: contextWithPermissions,
     });
@@ -641,6 +663,7 @@ describe("prepareMcpConfig", () => {
       owner: "test-owner",
       repo: "test-repo",
       branch: "test-branch",
+      baseBranch: "main",
       allowedTools: [],
       context: contextWithPermissions,
     });
