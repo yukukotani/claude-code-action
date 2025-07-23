@@ -86,14 +86,18 @@ export async function setupBranch(
 
   // Generate branch name for either an issue or closed/merged PR
   const entityType = isPR ? "pr" : "issue";
-  const timestamp = new Date()
-    .toISOString()
-    .replace(/[:-]/g, "")
-    .replace(/\.\d{3}Z/, "")
-    .split("T")
-    .join("_");
 
-  const newBranch = `${branchPrefix}${entityType}-${entityNumber}-${timestamp}`;
+  // Create Kubernetes-compatible timestamp: lowercase, hyphens only, shorter format
+  const now = new Date();
+  const timestamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}-${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}`;
+
+  // Ensure branch name is Kubernetes-compatible:
+  // - Lowercase only
+  // - Alphanumeric with hyphens
+  // - No underscores
+  // - Max 50 chars (to allow for prefixes)
+  const branchName = `${branchPrefix}${entityType}-${entityNumber}-${timestamp}`;
+  const newBranch = branchName.toLowerCase().substring(0, 50);
 
   try {
     // Get the SHA of the source branch to verify it exists
@@ -112,6 +116,11 @@ export async function setupBranch(
         `Branch name generated: ${newBranch} (will be created by file ops server on first commit)`,
       );
 
+      // Ensure we're on the source branch
+      console.log(`Fetching and checking out source branch: ${sourceBranch}`);
+      await $`git fetch origin ${sourceBranch} --depth=1`;
+      await $`git checkout ${sourceBranch}`;
+
       // Set outputs for GitHub Actions
       core.setOutput("CLAUDE_BRANCH", newBranch);
       core.setOutput("BASE_BRANCH", sourceBranch);
@@ -127,7 +136,12 @@ export async function setupBranch(
       `Creating local branch ${newBranch} for ${entityType} #${entityNumber} from source branch: ${sourceBranch}...`,
     );
 
-    // Create and checkout the new branch locally
+    // Fetch and checkout the source branch first to ensure we branch from the correct base
+    console.log(`Fetching and checking out source branch: ${sourceBranch}`);
+    await $`git fetch origin ${sourceBranch} --depth=1`;
+    await $`git checkout ${sourceBranch}`;
+
+    // Create and checkout the new branch from the source branch
     await $`git checkout -b ${newBranch}`;
 
     console.log(
