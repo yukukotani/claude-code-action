@@ -1,5 +1,11 @@
 name: Test Settings Feature
 
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  id-token: write
+
 on:
   push:
     branches:
@@ -13,13 +19,23 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
+      - name: Setup app token and auth
+        id: setup
+        uses: ./.github/actions/setup-app-token-and-auth
+        with:
+          private-key: ${{ secrets.CLAUDE_ASSISTANT_APP_PRIVATE_KEY }}
+
       - name: Test with inline settings JSON (echo allowed)
         id: inline-settings-test
         uses: ./base-action
+        env:
+          ANTHROPIC_VERTEX_PROJECT_ID: ${{ steps.setup.outputs.project-id }}
+          CLOUD_ML_REGION: "us-east5"
         with:
           prompt: |
             Use Bash to echo "Hello from settings test"
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ steps.setup.outputs.token }}
+          use_vertex: "true"
           settings: |
             {
               "permissions": {
@@ -63,13 +79,23 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
+      - name: Setup app token and auth
+        id: setup
+        uses: ./.github/actions/setup-app-token-and-auth
+        with:
+          private-key: ${{ secrets.CLAUDE_ASSISTANT_APP_PRIVATE_KEY }}
+
       - name: Test with inline settings JSON (echo denied)
         id: inline-settings-test
         uses: ./base-action
+        env:
+          ANTHROPIC_VERTEX_PROJECT_ID: ${{ steps.setup.outputs.project-id }}
+          CLOUD_ML_REGION: "us-east5"
         with:
           prompt: |
             Use Bash to echo "This should not work"
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ steps.setup.outputs.token }}
+          use_vertex: "true"
           settings: |
             {
               "permissions": {
@@ -96,6 +122,12 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
+      - name: Setup app token and auth
+        id: setup
+        uses: ./.github/actions/setup-app-token-and-auth
+        with:
+          private-key: ${{ secrets.CLAUDE_ASSISTANT_APP_PRIVATE_KEY }}
+
       - name: Create settings file (echo allowed)
         run: |
           cat > test-settings.json << EOF
@@ -109,10 +141,14 @@ jobs:
       - name: Test with settings file
         id: file-settings-test
         uses: ./base-action
+        env:
+          ANTHROPIC_VERTEX_PROJECT_ID: ${{ steps.setup.outputs.project-id }}
+          CLOUD_ML_REGION: "us-east5"
         with:
           prompt: |
             Use Bash to echo "Hello from settings file test"
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ steps.setup.outputs.token }}
+          use_vertex: "true"
           settings: "test-settings.json"
           timeout_minutes: "2"
 
@@ -151,6 +187,12 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
+      - name: Setup app token and auth
+        id: setup
+        uses: ./.github/actions/setup-app-token-and-auth
+        with:
+          private-key: ${{ secrets.CLAUDE_ASSISTANT_APP_PRIVATE_KEY }}
+
       - name: Create settings file (echo denied)
         run: |
           cat > test-settings.json << EOF
@@ -164,10 +206,14 @@ jobs:
       - name: Test with settings file
         id: file-settings-test
         uses: ./base-action
+        env:
+          ANTHROPIC_VERTEX_PROJECT_ID: ${{ steps.setup.outputs.project-id }}
+          CLOUD_ML_REGION: "us-east5"
         with:
           prompt: |
             Use Bash to echo "This should not work from file"
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ steps.setup.outputs.token }}
+          use_vertex: "true"
           settings: "test-settings.json"
           timeout_minutes: "2"
 

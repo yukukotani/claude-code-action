@@ -1,5 +1,11 @@
 name: Test Claude Code Action
 
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  id-token: write
+
 on:
   push:
     branches:
@@ -18,12 +24,22 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
+      - name: Setup app token and auth
+        id: setup
+        uses: ./.github/actions/setup-app-token-and-auth
+        with:
+          private-key: ${{ secrets.CLAUDE_ASSISTANT_APP_PRIVATE_KEY }}
+
       - name: Test with inline prompt
         id: inline-test
         uses: ./base-action
+        env:
+          ANTHROPIC_VERTEX_PROJECT_ID: ${{ steps.setup.outputs.project-id }}
+          CLOUD_ML_REGION: "us-east5"
         with:
           prompt: ${{ github.event.inputs.test_prompt || 'List the files in the current directory starting with "package"' }}
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ steps.setup.outputs.token }}
+          use_vertex: "true"
           allowed_tools: "LS,Read"
           timeout_minutes: "3"
 
@@ -68,6 +84,12 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
+      - name: Setup app token and auth
+        id: setup
+        uses: ./.github/actions/setup-app-token-and-auth
+        with:
+          private-key: ${{ secrets.CLAUDE_ASSISTANT_APP_PRIVATE_KEY }}
+
       - name: Create test prompt file
         run: |
           cat > test-prompt.txt << EOF
@@ -79,9 +101,13 @@ jobs:
       - name: Test with prompt file and allowed tools
         id: prompt-file-test
         uses: ./base-action
+        env:
+          ANTHROPIC_VERTEX_PROJECT_ID: ${{ steps.setup.outputs.project-id }}
+          CLOUD_ML_REGION: "us-east5"
         with:
           prompt_file: "test-prompt.txt"
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ steps.setup.outputs.token }}
+          use_vertex: "true"
           allowed_tools: "LS,Read"
           timeout_minutes: "3"
 
