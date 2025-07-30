@@ -81,7 +81,7 @@ async function run() {
     // Step 9: Configure git authentication if not using commit signing
     if (!context.inputs.useCommitSigning) {
       try {
-        await configureGitAuth(githubToken, context, commentData?.user || null);
+        await configureGitAuth(octokit.rest, githubToken, context);
       } catch (error) {
         console.error("Failed to configure git authentication:", error);
         throw error;
