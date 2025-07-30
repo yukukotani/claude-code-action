@@ -15,7 +15,7 @@ jobs:
 
       - name: Setup app token and auth
         id: setup
-        uses: ./actions/setup-app-token-and-auth
+        uses: ./.github/actions/setup-app-token-and-auth
         with:
           private-key: ${{ secrets.CLAUDE_ASSISTANT_APP_PRIVATE_KEY }}
 
