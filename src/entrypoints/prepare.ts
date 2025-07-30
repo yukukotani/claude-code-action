@@ -63,7 +63,7 @@ async function run() {
       | undefined;
     if (mode.shouldCreateTrackingComment()) {
       commentData = await createInitialComment(octokit.rest, context);
-      commentId = commentData.id;
+      commentId = commentData?.id;
     }
 
     // Step 7: Fetch GitHub data (once for both branch setup and prompt creation)
