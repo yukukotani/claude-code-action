@@ -1,32 +1,32 @@
-name: 'Setup App Token and Google Auth'
-description: 'Create GitHub App token and authenticate with Google Cloud'
+name: "Setup App Token and Google Auth"
+description: "Create GitHub App token and authenticate with Google Cloud"
 inputs:
   app-id:
-    description: 'GitHub App ID'
+    description: "GitHub App ID"
     required: false
-    default: '1328202'
+    default: "1328202"
   private-key:
-    description: 'GitHub App private key'
+    description: "GitHub App private key"
     required: true
   workload-identity-provider:
-    description: 'Workload identity provider for Google Cloud'
+    description: "Workload identity provider for Google Cloud"
     required: false
-    default: 'projects/925362051349/locations/global/workloadIdentityPools/github-oidc-pool/providers/github-oidc-provider'
+    default: "projects/925362051349/locations/global/workloadIdentityPools/github-oidc-pool/providers/github-oidc-provider"
   service-account:
-    description: 'Service account for Google Cloud'
+    description: "Service account for Google Cloud"
     required: false
-    default: 'github-actions@ubie-gl-claude-actions-prd.iam.gserviceaccount.com'
+    default: "github-actions@ubie-gl-claude-actions-prd.iam.gserviceaccount.com"
 
 outputs:
   token:
-    description: 'Generated GitHub App token'
+    description: "Generated GitHub App token"
     value: ${{ steps.app-token.outputs.token }}
   project-id:
-    description: 'Google Cloud project ID'
+    description: "Google Cloud project ID"
     value: ${{ steps.auth.outputs.project_id }}
 
 runs:
-  using: 'composite'
+  using: "composite"
   steps:
     - name: Create GitHub App token
       id: app-token
