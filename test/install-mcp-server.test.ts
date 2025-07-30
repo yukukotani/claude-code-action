@@ -106,7 +106,9 @@ describe("prepareMcpConfig", () => {
     );
     expect(parsed.mcpServers.github_comment.env.REPO_OWNER).toBe("test-owner");
     expect(parsed.mcpServers.github_comment.env.REPO_NAME).toBe("test-repo");
-    expect(parsed.mcpServers.github_comment.env.CLAUDE_COMMENT_ID).toBe("12345");
+    expect(parsed.mcpServers.github_comment.env.CLAUDE_COMMENT_ID).toBe(
+      "12345",
+    );
   });
 
   test("should not include comment server when claudeCommentId is not provided", async () => {
