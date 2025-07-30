@@ -13,13 +13,20 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
+      - name: Setup app token and auth
+        id: setup
+        uses: ./actions/setup-app-token-and-auth
+        with:
+          private-key: ${{ secrets.CLAUDE_ASSISTANT_APP_PRIVATE_KEY }}
+
       - name: Test with comments in env
         id: comment-test
         uses: ./base-action
         with:
           prompt: |
             Use the Bash tool to run: echo "VAR1: $VAR1" && echo "VAR2: $VAR2"
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ steps.setup.outputs.token }}
+          use_vertex: "true"
           claude_env: |
             # This is a comment
             VAR1: value1
