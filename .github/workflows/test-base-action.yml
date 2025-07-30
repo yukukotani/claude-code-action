@@ -33,6 +33,9 @@ jobs:
       - name: Test with inline prompt
         id: inline-test
         uses: ./base-action
+        env:
+          ANTHROPIC_VERTEX_PROJECT_ID: ${{ steps.setup.outputs.project-id }}
+          CLOUD_ML_REGION: "us-east5"
         with:
           prompt: ${{ github.event.inputs.test_prompt || 'List the files in the current directory starting with "package"' }}
           github_token: ${{ steps.setup.outputs.token }}
@@ -98,6 +101,9 @@ jobs:
       - name: Test with prompt file and allowed tools
         id: prompt-file-test
         uses: ./base-action
+        env:
+          ANTHROPIC_VERTEX_PROJECT_ID: ${{ steps.setup.outputs.project-id }}
+          CLOUD_ML_REGION: "us-east5"
         with:
           prompt_file: "test-prompt.txt"
           github_token: ${{ steps.setup.outputs.token }}

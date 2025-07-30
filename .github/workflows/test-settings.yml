@@ -28,6 +28,9 @@ jobs:
       - name: Test with inline settings JSON (echo allowed)
         id: inline-settings-test
         uses: ./base-action
+        env:
+          ANTHROPIC_VERTEX_PROJECT_ID: ${{ steps.setup.outputs.project-id }}
+          CLOUD_ML_REGION: "us-east5"
         with:
           prompt: |
             Use Bash to echo "Hello from settings test"
@@ -85,6 +88,9 @@ jobs:
       - name: Test with inline settings JSON (echo denied)
         id: inline-settings-test
         uses: ./base-action
+        env:
+          ANTHROPIC_VERTEX_PROJECT_ID: ${{ steps.setup.outputs.project-id }}
+          CLOUD_ML_REGION: "us-east5"
         with:
           prompt: |
             Use Bash to echo "This should not work"
@@ -135,6 +141,9 @@ jobs:
       - name: Test with settings file
         id: file-settings-test
         uses: ./base-action
+        env:
+          ANTHROPIC_VERTEX_PROJECT_ID: ${{ steps.setup.outputs.project-id }}
+          CLOUD_ML_REGION: "us-east5"
         with:
           prompt: |
             Use Bash to echo "Hello from settings file test"
@@ -197,6 +206,9 @@ jobs:
       - name: Test with settings file
         id: file-settings-test
         uses: ./base-action
+        env:
+          ANTHROPIC_VERTEX_PROJECT_ID: ${{ steps.setup.outputs.project-id }}
+          CLOUD_ML_REGION: "us-east5"
         with:
           prompt: |
             Use Bash to echo "This should not work from file"

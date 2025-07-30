@@ -38,6 +38,7 @@ jobs:
       - name: Run Claude Code with MCP test
         uses: ./base-action
         id: claude-test
+
         with:
           prompt: "List all available tools"
           github_token: ${{ steps.setup.outputs.token }}
@@ -45,6 +46,8 @@ jobs:
         env:
           # Change to test directory so it finds .mcp.json
           CLAUDE_WORKING_DIR: ${{ github.workspace }}/base-action/test/mcp-test
+          ANTHROPIC_VERTEX_PROJECT_ID: ${{ steps.setup.outputs.project-id }}
+          CLOUD_ML_REGION: "us-east5"
 
       - name: Check MCP server output
         run: |
@@ -134,6 +137,8 @@ jobs:
         env:
           # Change to test directory so bun can find the MCP server script
           CLAUDE_WORKING_DIR: ${{ github.workspace }}/base-action/test/mcp-test
+          ANTHROPIC_VERTEX_PROJECT_ID: ${{ steps.setup.outputs.project-id }}
+          CLOUD_ML_REGION: "us-east5"
 
       - name: Check MCP server output with --mcp-config
         run: |
