@@ -16,17 +16,29 @@ import type { Octokit } from "@octokit/rest";
 
 const CLAUDE_APP_BOT_ID = 209825114;
 
+type CommentResponseBody = {
+  id: number;
+  user: {
+    id: number;
+    login: string;
+  } | null;
+};
+
 export async function createInitialComment(
   octokit: Octokit,
   context: ParsedGitHubContext,
 ) {
+  if (context.inputs.overridePrompt) {
+    return null;
+  }
+
   const { owner, repo } = context.repository;
 
   const jobRunLink = createJobRunLink(owner, repo, context.runId);
   const initialBody = createCommentBody(jobRunLink);
 
   try {
-    let response;
+    let response: { data: CommentResponseBody };
 
     if (
       context.inputs.useStickyComment &&
