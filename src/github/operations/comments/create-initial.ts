@@ -28,6 +28,10 @@ export async function createInitialComment(
   octokit: Octokit,
   context: ParsedGitHubContext,
 ) {
+  // If override_prompt is set, the prompt doesn't have an instruction
+  // that enforces the use of mcp__github_comment__update_claude_comment
+  // to update the initial comment.
+  // So we don't need to create an initial comment in this case.
   if (context.inputs.overridePrompt) {
     return null;
   }
