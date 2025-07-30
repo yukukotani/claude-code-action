@@ -1,5 +1,11 @@
 name: Test Claude Env Feature
 
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  id-token: write
+
 on:
   push:
     branches:
