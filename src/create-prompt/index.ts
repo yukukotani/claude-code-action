@@ -803,7 +803,9 @@ export async function createPrompt(
   try {
     // Tag mode requires a comment ID
     if (mode.name === "tag" && !modeContext.commentId) {
-      throw new Error("Tag mode requires a comment ID for prompt generation unless you're using override_prompt");
+      throw new Error(
+        "Tag mode requires a comment ID for prompt generation unless you're using override_prompt",
+      );
     }
 
     // Prepare the context for prompt generation
