@@ -26,7 +26,7 @@ export async function configureGitAuth(
 
   // Configure git user based on the comment creator
   console.log("Configuring git user...");
-  const user = await getBotUser(octokit, context);
+  const user = await getBotUser(octokit);
   if (user) {
     const botName = user.login;
     const botId = user.id;
@@ -58,7 +58,7 @@ export async function configureGitAuth(
   console.log("Git authentication configured successfully");
 }
 
-async function getBotUser(octokit: Octokit, context: ParsedGitHubContext) {
+async function getBotUser(octokit: Octokit) {
   try {
     const user = await octokit.rest.users.getAuthenticated();
     return {
@@ -81,14 +81,9 @@ async function getBotUser(octokit: Octokit, context: ParsedGitHubContext) {
 }
 
 async function getBotUserFromInstallation(octokit: Octokit) {
-  const { data: app } = await octokit.rest.apps.getAuthenticated();
-
-  const { data: user } = await octokit.rest.users.getByUsername({
-    username: `${app?.slug ?? "github-actions"}[bot]`,
-  });
-
+  const { data: installation } = await octokit.request("GET /installation");
   return {
-    login: user.login,
-    id: user.id,
+    login: installation.account.login,
+    id: installation.id,
   };
 }
