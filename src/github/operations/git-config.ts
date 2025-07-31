@@ -26,8 +26,7 @@ export async function configureGitAuth(
 
   // Configure git user based on the comment creator
   console.log("Configuring git user...");
-  const userResponse = await octokit.rest.users.getAuthenticated();
-  const user = userResponse.data;
+  const user = await getBotUser(octokit, context);
   if (user) {
     const botName = user.login;
     const botId = user.id;
@@ -57,4 +56,53 @@ export async function configureGitAuth(
   console.log("✓ Updated remote URL with authentication token");
 
   console.log("Git authentication configured successfully");
+}
+
+async function getBotUser(octokit: Octokit, context: ParsedGitHubContext) {
+  try {
+    const user = await octokit.rest.users.getAuthenticated();
+    return {
+      login: user.data.login,
+      id: user.data.id,
+    };
+  } catch (e: unknown) {
+    // If the user is not authenticated, we can try to get the bot user from the GitHub App installation
+    if (
+      typeof e === "object" &&
+      e !== null &&
+      "status" in e &&
+      e.status === 403
+    ) {
+      return await getBotUserFromInstallation(octokit, context);
+    }
+
+    throw e;
+  }
+}
+
+async function getBotUserFromInstallation(
+  octokit: Octokit,
+  context: ParsedGitHubContext,
+) {
+  const installation = await octokit.rest.apps.getRepoInstallation({
+    owner: context.repository.owner,
+    repo: context.repository.repo,
+  });
+  const account = installation.data.account;
+  if (!account) {
+    throw new Error("No account found for GitHub App installation");
+  }
+
+  // Enterprise users have a slug instead of a login
+  if ("slug" in account) {
+    return {
+      login: account.slug,
+      id: account.id,
+    };
+  }
+
+  return {
+    login: account.login,
+    id: account.id,
+  };
 }
