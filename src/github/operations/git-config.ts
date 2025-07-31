@@ -73,36 +73,22 @@ async function getBotUser(octokit: Octokit, context: ParsedGitHubContext) {
       "status" in e &&
       e.status === 403
     ) {
-      return await getBotUserFromInstallation(octokit, context);
+      return await getBotUserFromInstallation(octokit);
     }
 
     throw e;
   }
 }
 
-async function getBotUserFromInstallation(
-  octokit: Octokit,
-  context: ParsedGitHubContext,
-) {
-  const installation = await octokit.rest.apps.getRepoInstallation({
-    owner: context.repository.owner,
-    repo: context.repository.repo,
-  });
-  const account = installation.data.account;
-  if (!account) {
-    throw new Error("No account found for GitHub App installation");
-  }
+async function getBotUserFromInstallation(octokit: Octokit) {
+  const { data: app } = await octokit.rest.apps.getAuthenticated();
 
-  // Enterprise users have a slug instead of a login
-  if ("slug" in account) {
-    return {
-      login: account.slug,
-      id: account.id,
-    };
-  }
+  const { data: user } = await octokit.rest.users.getByUsername({
+    username: `${app?.slug ?? "github-actions"}[bot]`,
+  });
 
   return {
-    login: account.login,
-    id: account.id,
+    login: user.login,
+    id: user.id,
   };
 }
