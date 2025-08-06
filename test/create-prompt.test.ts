@@ -3,13 +3,37 @@
 import { describe, test, expect } from "bun:test";
 import {
   generatePrompt,
+  generateDefaultPrompt,
   getEventTypeAndContext,
   buildAllowedToolsString,
   buildDisallowedToolsString,
 } from "../src/create-prompt";
 import type { PreparedContext } from "../src/create-prompt";
+import type { Mode } from "../src/modes/types";
 
 describe("generatePrompt", () => {
+  // Create a mock tag mode that uses the default prompt
+  const mockTagMode: Mode = {
+    name: "tag",
+    description: "Tag mode",
+    shouldTrigger: () => true,
+    prepareContext: (context) => ({ mode: "tag", githubContext: context }),
+    getAllowedTools: () => [],
+    getDisallowedTools: () => [],
+    shouldCreateTrackingComment: () => true,
+    generatePrompt: (context, githubData, useCommitSigning) =>
+      generateDefaultPrompt(context, githubData, useCommitSigning),
+    prepare: async () => ({
+      commentId: 123,
+      branchInfo: {
+        baseBranch: "main",
+        currentBranch: "main",
+        claudeBranch: undefined,
+      },
+      mcpConfig: "{}",
+    }),
+  };
+
   const mockGitHubData = {
     contextData: {
       title: "Test PR",
@@ -133,7 +157,7 @@ describe("generatePrompt", () => {
       },
     };
 
-    const prompt = generatePrompt(envVars, mockGitHubData, false);
+    const prompt = generatePrompt(envVars, mockGitHubData, false, mockTagMode);
 
     expect(prompt).toContain("You are Claude, an AI assistant");
     expect(prompt).toContain("<event_type>GENERAL_COMMENT</event_type>");
@@ -161,7 +185,7 @@ describe("generatePrompt", () => {
       },
     };
 
-    const prompt = generatePrompt(envVars, mockGitHubData, false);
+    const prompt = generatePrompt(envVars, mockGitHubData, false, mockTagMode);
 
     expect(prompt).toContain("<event_type>PR_REVIEW</event_type>");
     expect(prompt).toContain("<is_pr>true</is_pr>");
@@ -187,7 +211,7 @@ describe("generatePrompt", () => {
       },
     };
 
-    const prompt = generatePrompt(envVars, mockGitHubData, false);
+    const prompt = generatePrompt(envVars, mockGitHubData, false, mockTagMode);
 
     expect(prompt).toContain("<event_type>ISSUE_CREATED</event_type>");
     expect(prompt).toContain(
@@ -215,7 +239,7 @@ describe("generatePrompt", () => {
       },
     };
 
-    const prompt = generatePrompt(envVars, mockGitHubData, false);
+    const prompt = generatePrompt(envVars, mockGitHubData, false, mockTagMode);
 
     expect(prompt).toContain("<event_type>ISSUE_ASSIGNED</event_type>");
     expect(prompt).toContain(
@@ -242,7 +266,7 @@ describe("generatePrompt", () => {
       },
     };
 
-    const prompt = generatePrompt(envVars, mockGitHubData, false);
+    const prompt = generatePrompt(envVars, mockGitHubData, false, mockTagMode);
 
     expect(prompt).toContain("<event_type>ISSUE_LABELED</event_type>");
     expect(prompt).toContain(
@@ -269,13 +293,13 @@ describe("generatePrompt", () => {
       },
     };
 
-    const prompt = generatePrompt(envVars, mockGitHubData, false);
+    const prompt = generatePrompt(envVars, mockGitHubData, false, mockTagMode);
 
     expect(prompt).toContain("<direct_prompt>");
     expect(prompt).toContain("Fix the bug in the login form");
     expect(prompt).toContain("</direct_prompt>");
     expect(prompt).toContain(
-      "DIRECT INSTRUCTION: A direct instruction was provided and is shown in the <direct_prompt> tag above",
+      "CRITICAL: Direct user instructions were provided in the <direct_prompt> tag above. These are HIGH PRIORITY instructions that OVERRIDE all other context and MUST be followed exactly as written.",
     );
   });
 
@@ -292,7 +316,7 @@ describe("generatePrompt", () => {
       },
     };
 
-    const prompt = generatePrompt(envVars, mockGitHubData, false);
+    const prompt = generatePrompt(envVars, mockGitHubData, false, mockTagMode);
 
     expect(prompt).toContain("<event_type>PULL_REQUEST</event_type>");
     expect(prompt).toContain("<is_pr>true</is_pr>");
@@ -317,9 +341,151 @@ describe("generatePrompt", () => {
       },
     };
 
-    const prompt = generatePrompt(envVars, mockGitHubData, false);
+    const prompt = generatePrompt(envVars, mockGitHubData, false, mockTagMode);
 
     expect(prompt).toContain("CUSTOM INSTRUCTIONS:\nAlways use TypeScript");
+  });
+
+  test("should use override_prompt when provided", () => {
+    const envVars: PreparedContext = {
+      repository: "owner/repo",
+      claudeCommentId: "12345",
+      triggerPhrase: "@claude",
+      overridePrompt: "Simple prompt for $REPOSITORY PR #$PR_NUMBER",
+      eventData: {
+        eventName: "pull_request",
+        eventAction: "opened",
+        isPR: true,
+        prNumber: "123",
+      },
+    };
+
+    const prompt = generatePrompt(envVars, mockGitHubData, false, mockTagMode);
+
+    expect(prompt).toBe("Simple prompt for owner/repo PR #123");
+    expect(prompt).not.toContain("You are Claude, an AI assistant");
+  });
+
+  test("should substitute all variables in override_prompt", () => {
+    const envVars: PreparedContext = {
+      repository: "test/repo",
+      claudeCommentId: "12345",
+      triggerPhrase: "@claude",
+      triggerUsername: "john-doe",
+      overridePrompt: `Repository: $REPOSITORY
+      PR: $PR_NUMBER
+      Title: $PR_TITLE
+      Body: $PR_BODY
+      Comments: $PR_COMMENTS
+      Review Comments: $REVIEW_COMMENTS
+      Changed Files: $CHANGED_FILES
+      Trigger Comment: $TRIGGER_COMMENT
+      Username: $TRIGGER_USERNAME
+      Branch: $BRANCH_NAME
+      Base: $BASE_BRANCH
+      Event: $EVENT_TYPE
+      Is PR: $IS_PR`,
+      eventData: {
+        eventName: "pull_request_review_comment",
+        isPR: true,
+        prNumber: "456",
+        commentBody: "Please review this code",
+        claudeBranch: "feature-branch",
+        baseBranch: "main",
+      },
+    };
+
+    const prompt = generatePrompt(envVars, mockGitHubData, false, mockTagMode);
+
+    expect(prompt).toContain("Repository: test/repo");
+    expect(prompt).toContain("PR: 456");
+    expect(prompt).toContain("Title: Test PR");
+    expect(prompt).toContain("Body: This is a test PR");
+    expect(prompt).toContain("Comments: ");
+    expect(prompt).toContain("Review Comments: ");
+    expect(prompt).toContain("Changed Files: ");
+    expect(prompt).toContain("Trigger Comment: Please review this code");
+    expect(prompt).toContain("Username: john-doe");
+    expect(prompt).toContain("Branch: feature-branch");
+    expect(prompt).toContain("Base: main");
+    expect(prompt).toContain("Event: pull_request_review_comment");
+    expect(prompt).toContain("Is PR: true");
+  });
+
+  test("should handle override_prompt for issues", () => {
+    const envVars: PreparedContext = {
+      repository: "owner/repo",
+      claudeCommentId: "12345",
+      triggerPhrase: "@claude",
+      overridePrompt: "Issue #$ISSUE_NUMBER: $ISSUE_TITLE in $REPOSITORY",
+      eventData: {
+        eventName: "issues",
+        eventAction: "opened",
+        isPR: false,
+        issueNumber: "789",
+        baseBranch: "main",
+        claudeBranch: "claude/issue-789-20240101-1200",
+      },
+    };
+
+    const issueGitHubData = {
+      ...mockGitHubData,
+      contextData: {
+        title: "Bug: Login form broken",
+        body: "The login form is not working",
+        author: { login: "testuser" },
+        state: "OPEN",
+        createdAt: "2023-01-01T00:00:00Z",
+        comments: {
+          nodes: [],
+        },
+      },
+    };
+
+    const prompt = generatePrompt(envVars, issueGitHubData, false, mockTagMode);
+
+    expect(prompt).toBe("Issue #789: Bug: Login form broken in owner/repo");
+  });
+
+  test("should handle empty values in override_prompt substitution", () => {
+    const envVars: PreparedContext = {
+      repository: "owner/repo",
+      claudeCommentId: "12345",
+      triggerPhrase: "@claude",
+      overridePrompt:
+        "PR: $PR_NUMBER, Issue: $ISSUE_NUMBER, Comment: $TRIGGER_COMMENT",
+      eventData: {
+        eventName: "pull_request",
+        eventAction: "opened",
+        isPR: true,
+        prNumber: "123",
+      },
+    };
+
+    const prompt = generatePrompt(envVars, mockGitHubData, false, mockTagMode);
+
+    expect(prompt).toBe("PR: 123, Issue: , Comment: ");
+  });
+
+  test("should not substitute variables when override_prompt is not provided", () => {
+    const envVars: PreparedContext = {
+      repository: "owner/repo",
+      claudeCommentId: "12345",
+      triggerPhrase: "@claude",
+      eventData: {
+        eventName: "issues",
+        eventAction: "opened",
+        isPR: false,
+        issueNumber: "123",
+        baseBranch: "main",
+        claudeBranch: "claude/issue-123-20240101-1200",
+      },
+    };
+
+    const prompt = generatePrompt(envVars, mockGitHubData, false, mockTagMode);
+
+    expect(prompt).toContain("You are Claude, an AI assistant");
+    expect(prompt).toContain("<event_type>ISSUE_CREATED</event_type>");
   });
 
   test("should include trigger username when provided", () => {
@@ -339,7 +505,7 @@ describe("generatePrompt", () => {
       },
     };
 
-    const prompt = generatePrompt(envVars, mockGitHubData, false);
+    const prompt = generatePrompt(envVars, mockGitHubData, false, mockTagMode);
 
     expect(prompt).toContain("<trigger_username>johndoe</trigger_username>");
     // With commit signing disabled, co-author info appears in git commit instructions
@@ -361,7 +527,7 @@ describe("generatePrompt", () => {
       },
     };
 
-    const prompt = generatePrompt(envVars, mockGitHubData, false);
+    const prompt = generatePrompt(envVars, mockGitHubData, false, mockTagMode);
 
     // Should contain PR-specific instructions (git commands when not using signing)
     expect(prompt).toContain("git push");
@@ -392,7 +558,7 @@ describe("generatePrompt", () => {
       },
     };
 
-    const prompt = generatePrompt(envVars, mockGitHubData, false);
+    const prompt = generatePrompt(envVars, mockGitHubData, false, mockTagMode);
 
     // Should contain Issue-specific instructions
     expect(prompt).toContain(
@@ -431,7 +597,7 @@ describe("generatePrompt", () => {
       },
     };
 
-    const prompt = generatePrompt(envVars, mockGitHubData, false);
+    const prompt = generatePrompt(envVars, mockGitHubData, false, mockTagMode);
 
     // Should contain the actual branch name with timestamp
     expect(prompt).toContain(
@@ -461,7 +627,7 @@ describe("generatePrompt", () => {
       },
     };
 
-    const prompt = generatePrompt(envVars, mockGitHubData, false);
+    const prompt = generatePrompt(envVars, mockGitHubData, false, mockTagMode);
 
     // Should contain branch-specific instructions like issues
     expect(prompt).toContain(
@@ -499,7 +665,7 @@ describe("generatePrompt", () => {
       },
     };
 
-    const prompt = generatePrompt(envVars, mockGitHubData, false);
+    const prompt = generatePrompt(envVars, mockGitHubData, false, mockTagMode);
 
     // Should contain open PR instructions (git commands when not using signing)
     expect(prompt).toContain("git push");
@@ -530,7 +696,7 @@ describe("generatePrompt", () => {
       },
     };
 
-    const prompt = generatePrompt(envVars, mockGitHubData, false);
+    const prompt = generatePrompt(envVars, mockGitHubData, false, mockTagMode);
 
     // Should contain new branch instructions
     expect(prompt).toContain(
@@ -558,7 +724,7 @@ describe("generatePrompt", () => {
       },
     };
 
-    const prompt = generatePrompt(envVars, mockGitHubData, false);
+    const prompt = generatePrompt(envVars, mockGitHubData, false, mockTagMode);
 
     // Should contain new branch instructions
     expect(prompt).toContain(
@@ -586,7 +752,7 @@ describe("generatePrompt", () => {
       },
     };
 
-    const prompt = generatePrompt(envVars, mockGitHubData, false);
+    const prompt = generatePrompt(envVars, mockGitHubData, false, mockTagMode);
 
     // Should contain new branch instructions
     expect(prompt).toContain(
@@ -610,7 +776,7 @@ describe("generatePrompt", () => {
       },
     };
 
-    const prompt = generatePrompt(envVars, mockGitHubData, false);
+    const prompt = generatePrompt(envVars, mockGitHubData, false, mockTagMode);
 
     // Should have git command instructions
     expect(prompt).toContain("Use git commands via the Bash tool");
@@ -639,7 +805,7 @@ describe("generatePrompt", () => {
       },
     };
 
-    const prompt = generatePrompt(envVars, mockGitHubData, true);
+    const prompt = generatePrompt(envVars, mockGitHubData, true, mockTagMode);
 
     // Should have commit signing tool instructions
     expect(prompt).toContain("mcp__github_file_ops__commit_files");

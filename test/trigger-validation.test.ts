@@ -28,10 +28,12 @@ describe("checkContainsTrigger", () => {
         eventName: "issues",
         eventAction: "opened",
         inputs: {
+          mode: "tag",
           triggerPhrase: "/claude",
           assigneeTrigger: "",
           labelTrigger: "",
           directPrompt: "Fix the bug in the login form",
+          overridePrompt: "",
           allowedTools: [],
           disallowedTools: [],
           customInstructions: "",
@@ -60,10 +62,12 @@ describe("checkContainsTrigger", () => {
           },
         } as IssuesEvent,
         inputs: {
+          mode: "tag",
           triggerPhrase: "/claude",
           assigneeTrigger: "",
           labelTrigger: "",
           directPrompt: "",
+          overridePrompt: "",
           allowedTools: [],
           disallowedTools: [],
           customInstructions: "",
@@ -276,10 +280,12 @@ describe("checkContainsTrigger", () => {
           },
         } as PullRequestEvent,
         inputs: {
+          mode: "tag",
           triggerPhrase: "@claude",
           assigneeTrigger: "",
           labelTrigger: "",
           directPrompt: "",
+          overridePrompt: "",
           allowedTools: [],
           disallowedTools: [],
           customInstructions: "",
@@ -309,10 +315,12 @@ describe("checkContainsTrigger", () => {
           },
         } as PullRequestEvent,
         inputs: {
+          mode: "tag",
           triggerPhrase: "@claude",
           assigneeTrigger: "",
           labelTrigger: "",
           directPrompt: "",
+          overridePrompt: "",
           allowedTools: [],
           disallowedTools: [],
           customInstructions: "",
@@ -342,10 +350,12 @@ describe("checkContainsTrigger", () => {
           },
         } as PullRequestEvent,
         inputs: {
+          mode: "tag",
           triggerPhrase: "@claude",
           assigneeTrigger: "",
           labelTrigger: "",
           directPrompt: "",
+          overridePrompt: "",
           allowedTools: [],
           disallowedTools: [],
           customInstructions: "",
@@ -467,17 +477,6 @@ describe("checkContainsTrigger", () => {
         } as ParsedGitHubContext;
         expect(checkContainsTrigger(context)).toBe(expected);
       });
-    });
-  });
-
-  describe("non-matching events", () => {
-    it("should return false for non-matching event type", () => {
-      const context = createMockContext({
-        eventName: "push",
-        eventAction: "created",
-        payload: {} as any,
-      });
-      expect(checkContainsTrigger(context)).toBe(false);
     });
   });
 });

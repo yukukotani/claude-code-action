@@ -1,4 +1,7 @@
-import type { ParsedGitHubContext } from "../src/github/context";
+import type {
+  ParsedGitHubContext,
+  AutomationContext,
+} from "../src/github/context";
 import type {
   IssuesEvent,
   IssueCommentEvent,
@@ -8,6 +11,7 @@ import type {
 } from "@octokit/webhooks-types";
 
 const defaultInputs = {
+  mode: "tag" as const,
   triggerPhrase: "/claude",
   assigneeTrigger: "",
   labelTrigger: "",
@@ -16,6 +20,7 @@ const defaultInputs = {
   disallowedTools: [] as string[],
   customInstructions: "",
   directPrompt: "",
+  overridePrompt: "",
   useBedrock: false,
   useVertex: false,
   timeoutMinutes: 30,
@@ -37,7 +42,7 @@ export const createMockContext = (
 ): ParsedGitHubContext => {
   const baseContext: ParsedGitHubContext = {
     runId: "1234567890",
-    eventName: "",
+    eventName: "issue_comment", // Default to a valid entity event
     eventAction: "",
     repository: defaultRepository,
     actor: "test-actor",
@@ -50,6 +55,22 @@ export const createMockContext = (
   if (overrides.inputs) {
     overrides.inputs = { ...defaultInputs, ...overrides.inputs };
   }
+
+  return { ...baseContext, ...overrides };
+};
+
+export const createMockAutomationContext = (
+  overrides: Partial<AutomationContext> = {},
+): AutomationContext => {
+  const baseContext: AutomationContext = {
+    runId: "1234567890",
+    eventName: "workflow_dispatch",
+    eventAction: undefined,
+    repository: defaultRepository,
+    actor: "test-actor",
+    payload: {} as any,
+    inputs: defaultInputs,
+  };
 
   return { ...baseContext, ...overrides };
 };

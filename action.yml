@@ -28,6 +28,12 @@ inputs:
     required: false
     default: ""
 
+  # Mode configuration
+  mode:
+    description: "Execution mode for the action. Valid modes: 'tag' (default - triggered by mentions/assignments), 'agent' (for automation with no trigger checking), 'experimental-review' (experimental mode for code reviews with inline comments and suggestions)"
+    required: false
+    default: "tag"
+
   # Claude Code configuration
   model:
     description: "Model to use (provider-specific format required for Bedrock/Vertex)"
@@ -52,6 +58,10 @@ inputs:
     default: ""
   direct_prompt:
     description: "Direct instruction for Claude (bypasses normal trigger detection)"
+    required: false
+    default: ""
+  override_prompt:
+    description: "Complete replacement of Claude's prompt with custom template (supports variable substitution)"
     required: false
     default: ""
   mcp_config:
@@ -137,6 +147,7 @@ runs:
       run: |
         bun run ${GITHUB_ACTION_PATH}/src/entrypoints/prepare.ts
       env:
+        MODE: ${{ inputs.mode }}
         TRIGGER_PHRASE: ${{ inputs.trigger_phrase }}
         ASSIGNEE_TRIGGER: ${{ inputs.assignee_trigger }}
         LABEL_TRIGGER: ${{ inputs.label_trigger }}
@@ -146,59 +157,44 @@ runs:
         DISALLOWED_TOOLS: ${{ inputs.disallowed_tools }}
         CUSTOM_INSTRUCTIONS: ${{ inputs.custom_instructions }}
         DIRECT_PROMPT: ${{ inputs.direct_prompt }}
+        OVERRIDE_PROMPT: ${{ inputs.override_prompt }}
         MCP_CONFIG: ${{ inputs.mcp_config }}
         OVERRIDE_GITHUB_TOKEN: ${{ inputs.github_token }}
         ALLOWED_BOTS: ${{ inputs.allowed_bots }}
         GITHUB_RUN_ID: ${{ github.run_id }}
         USE_STICKY_COMMENT: ${{ inputs.use_sticky_comment }}
-        ACTIONS_TOKEN: ${{ github.token }}
+        DEFAULT_WORKFLOW_TOKEN: ${{ github.token }}
         ADDITIONAL_PERMISSIONS: ${{ inputs.additional_permissions }}
         USE_COMMIT_SIGNING: ${{ inputs.use_commit_signing }}
+
+    - name: Install Base Action Dependencies
+      if: steps.prepare.outputs.contains_trigger == 'true'
+      shell: bash
+      run: |
+        echo "Installing base-action dependencies..."
+        cd ${GITHUB_ACTION_PATH}/base-action
+        bun install
+        echo "Base-action dependencies installed"
+        cd -
+        # Install Claude Code globally
+        bun install -g @anthropic-ai/claude-code@1.0.68
 
     - name: Setup Network Restrictions
       if: steps.prepare.outputs.contains_trigger == 'true' && inputs.experimental_allowed_domains != ''
       shell: bash
       run: |
-        # Install and configure Squid proxy
-        sudo apt-get update && sudo apt-get install -y squid
-
-        echo "${{ inputs.experimental_allowed_domains }}" > $RUNNER_TEMP/whitelist.txt
-
-        # Configure Squid
-        sudo tee /etc/squid/squid.conf << EOF
-        http_port 127.0.0.1:3128
-        acl whitelist dstdomain "$RUNNER_TEMP/whitelist.txt"
-        acl localhost src 127.0.0.1/32
-        http_access allow localhost whitelist
-        http_access deny all
-        cache deny all
-        EOF
-
-        # Stop any existing squid instance and start with our config
-        sudo squid -k shutdown || true
-        sleep 2
-        sudo rm -f /run/squid.pid
-        sudo squid -N -d 1 &
-        sleep 5
-
-        # Set proxy environment variables
-        echo "http_proxy=http://127.0.0.1:3128" >> $GITHUB_ENV
-        echo "https_proxy=http://127.0.0.1:3128" >> $GITHUB_ENV
-        echo "HTTP_PROXY=http://127.0.0.1:3128" >> $GITHUB_ENV
-        echo "HTTPS_PROXY=http://127.0.0.1:3128" >> $GITHUB_ENV
+        chmod +x ${GITHUB_ACTION_PATH}/scripts/setup-network-restrictions.sh
+        ${GITHUB_ACTION_PATH}/scripts/setup-network-restrictions.sh
+      env:
+        EXPERIMENTAL_ALLOWED_DOMAINS: ${{ inputs.experimental_allowed_domains }}
 
     - name: Run Claude Code
       id: claude-code
       if: steps.prepare.outputs.contains_trigger == 'true'
       shell: bash
       run: |
-        # Install Claude Code globally
-        npm install -g @anthropic-ai/claude-code@1.0.56
 
         # Run the base-action
-        cd ${GITHUB_ACTION_PATH}/base-action
-        bun install
-        cd -
         bun run ${GITHUB_ACTION_PATH}/base-action/src/index.ts
       env:
         # Base-action inputs
@@ -210,15 +206,17 @@ runs:
         INPUT_MCP_CONFIG: ${{ steps.prepare.outputs.mcp_config }}
         INPUT_SETTINGS: ${{ inputs.settings }}
         INPUT_SYSTEM_PROMPT: ""
-        INPUT_APPEND_SYSTEM_PROMPT: ""
+        INPUT_APPEND_SYSTEM_PROMPT: ${{ env.APPEND_SYSTEM_PROMPT }}
         INPUT_TIMEOUT_MINUTES: ${{ inputs.timeout_minutes }}
         INPUT_CLAUDE_ENV: ${{ inputs.claude_env }}
         INPUT_FALLBACK_MODEL: ${{ inputs.fallback_model }}
+        INPUT_EXPERIMENTAL_SLASH_COMMANDS_DIR: ${{ github.action_path }}/slash-commands
 
         # Model configuration
         ANTHROPIC_MODEL: ${{ inputs.model || inputs.anthropic_model }}
         GITHUB_TOKEN: ${{ steps.prepare.outputs.GITHUB_TOKEN }}
         NODE_VERSION: ${{ env.NODE_VERSION }}
+        DETAILED_PERMISSION_MESSAGES: "1"
 
         # Provider configuration
         ANTHROPIC_API_KEY: ${{ inputs.anthropic_api_key }}
