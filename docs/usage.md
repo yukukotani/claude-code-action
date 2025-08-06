@@ -43,7 +43,7 @@ jobs:
           # additional_permissions: |
           #   actions: read
           # Optional: allow bot users to trigger the action
-          # allowed_bots: "dependabot,renovate"
+          # allowed_bots: "dependabot[bot],renovate[bot]"
 ```
 
 ## Inputs

@@ -31,18 +31,18 @@ describe("checkHumanActor", () => {
   test("should throw error for bot actor when not allowed", async () => {
     const mockOctokit = createMockOctokit("Bot");
     const context = createMockContext();
-    context.actor = "test-bot";
+    context.actor = "test-bot[bot]";
     context.inputs.allowedBots = "";
 
     await expect(checkHumanActor(mockOctokit, context)).rejects.toThrow(
-      "Workflow initiated by non-human actor: test-bot (type: Bot). Add bot to allowed_bots list or use '*' to allow all bots.",
+      "Workflow initiated by non-human actor: test-bot[bot] (type: Bot). Add bot to allowed_bots list or use '*' to allow all bots.",
     );
   });
 
   test("should pass for bot actor when all bots allowed", async () => {
     const mockOctokit = createMockOctokit("Bot");
     const context = createMockContext();
-    context.actor = "test-bot";
+    context.actor = "test-bot[bot]";
     context.inputs.allowedBots = "*";
 
     await expect(
@@ -53,8 +53,8 @@ describe("checkHumanActor", () => {
   test("should pass for specific bot when in allowed list", async () => {
     const mockOctokit = createMockOctokit("Bot");
     const context = createMockContext();
-    context.actor = "dependabot";
-    context.inputs.allowedBots = "dependabot,renovate";
+    context.actor = "dependabot[bot]";
+    context.inputs.allowedBots = "dependabot[bot],renovate[bot]";
 
     await expect(
       checkHumanActor(mockOctokit, context),
@@ -64,11 +64,11 @@ describe("checkHumanActor", () => {
   test("should throw error for bot not in allowed list", async () => {
     const mockOctokit = createMockOctokit("Bot");
     const context = createMockContext();
-    context.actor = "other-bot";
-    context.inputs.allowedBots = "dependabot,renovate";
+    context.actor = "other-bot[bot]";
+    context.inputs.allowedBots = "dependabot[bot],renovate[bot]";
 
     await expect(checkHumanActor(mockOctokit, context)).rejects.toThrow(
-      "Workflow initiated by non-human actor: other-bot (type: Bot). Add bot to allowed_bots list or use '*' to allow all bots.",
+      "Workflow initiated by non-human actor: other-bot[bot] (type: Bot). Add bot to allowed_bots list or use '*' to allow all bots.",
     );
   });
 });
