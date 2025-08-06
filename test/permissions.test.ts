@@ -73,6 +73,7 @@ describe("checkWritePermissions", () => {
       useStickyComment: false,
       additionalPermissions: new Map(),
       useCommitSigning: false,
+      allowedBots: "",
     },
   });
 
