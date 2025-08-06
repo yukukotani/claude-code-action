@@ -25,12 +25,6 @@ export async function checkHumanActor(
   if (actorType !== "User") {
     const allowedBots = githubContext.inputs.allowedBots;
 
-    // Parse allowed bots list
-    const allowedBotsList = allowedBots
-      .split(",")
-      .map((bot) => bot.trim().toLowerCase())
-      .filter((bot) => bot.length > 0);
-
     // Check if all bots are allowed
     if (allowedBots.trim() === "*") {
       console.log(
@@ -39,17 +33,30 @@ export async function checkHumanActor(
       return;
     }
 
+    // Parse allowed bots list
+    const allowedBotsList = allowedBots
+      .split(",")
+      .map((bot) =>
+        bot
+          .trim()
+          .toLowerCase()
+          .replace(/\[bot\]$/, ""),
+      )
+      .filter((bot) => bot.length > 0);
+
+    const botName = githubContext.actor.toLowerCase().replace(/\[bot\]$/, "");
+
     // Check if specific bot is allowed
-    if (allowedBotsList.includes(githubContext.actor.toLowerCase())) {
+    if (allowedBotsList.includes(botName)) {
       console.log(
-        `Bot ${githubContext.actor} is in allowed list, skipping human actor check`,
+        `Bot ${botName} is in allowed list, skipping human actor check`,
       );
       return;
     }
 
     // Bot not allowed
     throw new Error(
-      `Workflow initiated by non-human actor: ${githubContext.actor} (type: ${actorType}). Add bot to allowed_bots list or use '*' to allow all bots.`,
+      `Workflow initiated by non-human actor: ${botName} (type: ${actorType}). Add bot to allowed_bots list or use '*' to allow all bots.`,
     );
   }
 
